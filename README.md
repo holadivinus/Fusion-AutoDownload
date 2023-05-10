@@ -1,3 +1,5 @@
+# Fusion-AutoDownload
+
 This is my proof of concept auto-download mod! Use at your own risk!
 This mod will let you auto download Levels, Avatars, and Spawnables from the links in your repositories.txt in the games folder.
 
