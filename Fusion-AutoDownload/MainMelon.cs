@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Threading.Tasks;
-using System.Linq;
 
 using UnityEngine;
 using Il2Cpp = Il2CppSystem.Collections.Generic;
@@ -12,17 +10,11 @@ using SLZ.Marrow.Forklift.Model;
 using SLZ.Marrow.Warehouse;
 using Cysharp.Threading.Tasks;
 
-using HarmonyLib;
 using MelonLoader;
-using BoneLib.BoneMenu.Elements;
-using LabFusion.Representation;
-using LabFusion.BoneMenu;
-using LabFusion.Network;
-using System.Reflection.Emit;
-using LabFusion.Utilities;
-using BoneLib.Nullables;
-using LabFusion.Exceptions;
-using SLZ.Marrow.Data;
+
+using System.Linq;
+using System.Runtime.CompilerServices;
+using SLZ.SaveData;
 
 namespace FusionAutoDownload
 {
@@ -45,16 +37,16 @@ namespace FusionAutoDownload
         public static ModDownloadManager LatestModDownloadManager { get => new ModDownloadManager(); }
 
         /// <summary>
-        /// Connects a Barcode to its Pallet.
+        /// Connects a Barcode to its Pallet & Downloader.
         /// </summary>
-        public static Dictionary<string, ModListing> ModListings = new Dictionary<string, ModListing>();
+        public static Dictionary<string, (ModListing, ModTarget)> ModListings = new Dictionary<string, (ModListing, ModTarget)>();
 
         public override void OnLateInitializeMelon()
         {
             new HarmonyLib.Harmony($"Holadivinus.{nameof(AutoDownloadMelon)}.(0.0.1)")
             .PatchAll();
 
-            SetupFetchedRepositories(LatestModDownloadManager.FetchRepositoriesAsync(""));
+            SetupFetchedRepositories(new ModDownloadManager().FetchRepositoriesAsync(""));
 
             // On Warehouse Ready
             AssetWarehouse.OnReady(new Action(() =>
@@ -93,9 +85,17 @@ namespace FusionAutoDownload
             // Space out downloads to avoid crash
             while (true)
             {
-                await Task.Delay(2000);
+                await Task.Delay(1000);
                 if (DownloadQueue.Count != 0)
                     DownloadQueue.Dequeue().Invoke();
+                
+                if (Input.GetKey(KeyCode.Y))
+                {
+                    ModListing mod = ModListings["Jass.FordCop"].Item1;
+                    Msg(mod.Barcode.ID);
+                    if (mod.Targets.ContainsKey("pc"))
+                        Msg(mod.Targets["pc"].TryCast<DownloadableModTarget>());
+                }
             }
         }
 
@@ -105,17 +105,27 @@ namespace FusionAutoDownload
         /// <param name="fetcher">Unitask for fetching the Repo List</param>
         public static async void SetupFetchedRepositories(UniTask<Il2Cpp.List<ModRepository>> fetcher)
         {
-            ModListings = new Dictionary<string, ModListing>();
+            int c = 0;
+            ModListings = new Dictionary<string, (ModListing, ModTarget)>();
             foreach (ModRepository modRepo in await fetcher)
             {
                 foreach (ModListing mod in modRepo.Mods)
                 {
                     if (!ModListings.ContainsKey(mod.Barcode.ID))
                     {
-                        ModListings.Add(mod.Barcode.ID, mod);
+                        if (mod.Targets.ContainsKey("pc"))
+                        {
+                            DownloadableModTarget downloadable = mod.Targets["pc"].TryCast<DownloadableModTarget>();
+                            if (downloadable != null)
+                            {
+                                ModListings.Add(mod.Barcode.ID, (mod, mod.Targets["pc"]));
+                                c++;
+                            }
+                        }
                     }
                 }
             }
+            Msg(c.ToString() + " DownloadableMods!");
         }
     }
 }

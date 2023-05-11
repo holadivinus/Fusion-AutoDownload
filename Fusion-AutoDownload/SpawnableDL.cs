@@ -28,87 +28,93 @@ namespace FusionAutoDownload
                 WaitingSpawnables.Remove(spawnable);
             }
         }
-    }
 
-    // Spawnable
-    [HarmonyPatch(typeof(SpawnResponseMessage), "HandleMessage", new Type[] { typeof(byte[]), typeof(bool) })]
-    class SpawnResponseMessage_HandleMessage_Patch
-    {
-        [HarmonyPrefix]
-        public static bool Prefix(byte[] bytes, bool isServerHandled)
+        // Patches
+        [HarmonyPatch(typeof(SpawnResponseMessage), "HandleMessage", new Type[] { typeof(byte[]), typeof(bool) })]
+        class SpawnResponseMessage_HandleMessage_Patch
         {
-            if (!isServerHandled)
+            private static ushort? s_lastSyncId = null;
+            [HarmonyPrefix]
+            public static bool Prefix(byte[] bytes, bool isServerHandled)
             {
-                using (FusionReader reader = FusionReader.Create(bytes))
+                if (!isServerHandled)
                 {
-                    using (SpawnResponseData data = reader.ReadFusionSerializable<SpawnResponseData>())
+                    using (FusionReader reader = FusionReader.Create(bytes))
                     {
-                        if (AssetWarehouse.Instance.GetCrate<SpawnableCrate>(data.barcode) == null)
+                        using (SpawnResponseData data = reader.ReadFusionSerializable<SpawnResponseData>())
                         {
-                            string palletBarcode = data.barcode.Substring(0, data.barcode.IndexOf(".Spawnable."));
-                            if (AutoDownloadMelon.AttemptedPallets.Contains(palletBarcode))
+                            if (s_lastSyncId == null)
                             {
-                                ActuallyProcess(data);
-                                return true;
+                                s_lastSyncId = data.syncId;
                             }
-                            AutoDownloadMelon.AttemptedPallets.Add(palletBarcode);
-
-                            AutoDownloadMelon.Msg("Spawnable failed to load!");
-                            if (AutoDownloadMelon.ModListings.TryGetValue(palletBarcode, out ModListing foundMod))
+                            else
                             {
-                                AutoDownloadMelon.Msg("Spawnable Found in some Repo!");
-                                bool isPC = false;
-                                foreach (Il2Cpp.KeyValuePair<string, ModTarget> possibleTarg in foundMod.Targets)
+                                if (s_lastSyncId == data.syncId)
                                 {
-                                    if (possibleTarg.key == "pc")
-                                    {
-                                        isPC = true;
-                                        AutoDownloadMelon.Msg("Spawnable on PC!");
-                                        AutoDownloadMelon.DownloadQueue.Enqueue(() =>
-                                        {
-                                            AutoDownloadMelon.LatestModDownloadManager.DownloadMod(foundMod, possibleTarg.Value);
-                                            AutoDownloadMelon.WaitingSpawnables.Add((data.barcode, () =>
-                                            {
-                                                AutoDownloadMelon.Msg("Custom download Spawnable Spawning!!!");
-                                                ActuallyProcess(data);
-                                            }
-                                            ));
-                                        });
-                                        break;
-                                    }
+                                    s_lastSyncId = null;
+                                    return false;
                                 }
-                                if (!isPC)
-                                    AutoDownloadMelon.Msg("Spawnable not on PC.");
+                                else
+                                {
+                                    s_lastSyncId = null;
+                                }
                             }
-                            else AutoDownloadMelon.Msg($"Spawnable not found an any repo. ({data.barcode})");
+                            if (AssetWarehouse.Instance.GetCrate<SpawnableCrate>(data.barcode) == null)
+                            {
+                                string palletBarcode = data.barcode.Substring(0, data.barcode.IndexOf(".Spawnable."));
+                                if (AttemptedPallets.Contains(palletBarcode))
+                                {
+                                    ActuallyProcess(data);
+                                    return false;
+                                }
+                                AttemptedPallets.Add(palletBarcode);
+
+                                Msg("Spawnable failed to load!");
+                                if (ModListings.TryGetValue(palletBarcode, out (ModListing, ModTarget) foundMod))
+                                {
+                                    Msg("Spawnable Found in some Repo, queued for download!");
+
+                                    DownloadQueue.Enqueue(() =>
+                                    {
+                                        LatestModDownloadManager.DownloadMod(foundMod.Item1, foundMod.Item2);
+                                        WaitingSpawnables.Add((data.barcode, () =>
+                                        {
+                                            Msg("Custom download Spawnable Spawning!!!");
+                                            ActuallyProcess(data);
+                                        }
+                                        ));
+                                    });
+                                }
+                                else { Msg($"Spawnable not found an any repo. ({data.barcode})"); ActuallyProcess(data); }
+                            }
+                            else ActuallyProcess(data);
                         }
-                        else ActuallyProcess(data);
                     }
                 }
+                return false; // sorry original
             }
-            return true; // sorry original
-        }
-        public static void ActuallyProcess(SpawnResponseData data)
-        {
-            var crateRef = new SpawnableCrateReference(data.barcode);
-
-            var spawnable = new Spawnable()
+            public static void ActuallyProcess(SpawnResponseData data)
             {
-                crateRef = crateRef,
-                policyData = null
-            };
+                var crateRef = new SpawnableCrateReference(data.barcode);
 
-            SLZ.Marrow.Pool.AssetSpawner.Register(spawnable);
+                var spawnable = new Spawnable()
+                {
+                    crateRef = crateRef,
+                    policyData = null
+                };
 
-            byte owner = data.owner;
-            string barcode = data.barcode;
-            ushort syncId = data.syncId;
-            string path = data.spawnerPath;
-            var hand = data.hand;
+                SLZ.Marrow.Pool.AssetSpawner.Register(spawnable);
 
-            NullableMethodExtensions.PoolManager_Spawn(spawnable, data.serializedTransform.position, data.serializedTransform.rotation.Expand(), null,
-                true, null, (Action<GameObject>)((go) => { SpawnResponseMessage.OnSpawnFinished(owner, barcode, syncId, go, path, hand); }), null);
+                byte owner = data.owner;
+                string barcode = data.barcode;
+                ushort syncId = data.syncId;
+                string path = data.spawnerPath;
+                var hand = data.hand;
 
+                NullableMethodExtensions.PoolManager_Spawn(spawnable, data.serializedTransform.position, data.serializedTransform.rotation.Expand(), null,
+                    true, null, (Action<GameObject>)((go) => { SpawnResponseMessage.OnSpawnFinished(owner, barcode, syncId, go, path, hand); }), null);
+
+            }
         }
     }
 }

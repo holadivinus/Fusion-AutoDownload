@@ -6,6 +6,7 @@ using System.Reflection;
 using HarmonyLib;
 using SLZ.Marrow.Forklift.Model;
 using Il2Cpp = Il2CppSystem.Collections.Generic;
+using System.CodeDom;
 
 namespace FusionAutoDownload
 {
@@ -35,30 +36,15 @@ namespace FusionAutoDownload
 
             Msg("Avatar failed to load: " + player.avatarId);
 
-            if (ModListings.TryGetValue(palletBarcode, out ModListing foundMod))
+            if (ModListings.TryGetValue(palletBarcode, out (ModListing, ModTarget) foundMod))
             {
                 Msg("Found Avatar's Pallet in some linked Repo!");
-
-                bool onPC = false;
-                foreach (Il2Cpp.KeyValuePair<string, ModTarget> possibleTarg in foundMod.Targets)
+                Msg("Avatar Enqueued for download...");
+                DownloadQueue.Enqueue(new Action(() =>
                 {
-                    if (possibleTarg.key == "pc")
-                    {
-                        onPC = true;
-
-                        Msg("Avatar supported on pc. Avatar Enqueued for download...");
-                        DownloadQueue.Enqueue(new Action(() =>
-                        {
-                            Msg("Avatar now downloading: " + foundMod.Barcode.ID);
-                            LatestModDownloadManager.DownloadMod(foundMod, possibleTarg.value);
-                        }));
-                        break;
-                    }
-                }
-                if (!onPC)
-                {
-                    Msg("Avatar was unsupported on pc.");
-                }
+                    Msg("Avatar now downloading: " + foundMod.Item1.Barcode.ID);
+                    LatestModDownloadManager.DownloadMod(foundMod.Item1, foundMod.Item2);
+                }));
             }
             else Msg($"couldn't find the Avatar's Pallet ({palletBarcode}) in any Repos, cancelled.");
 
@@ -76,4 +62,18 @@ namespace FusionAutoDownload
                 AutoDownloadMelon.TryDownloadRepsAvatar(__instance);
         }
     }
+
+    /*[HarmonyPatch(typeof(PlayerRep), "CreateNametag")]
+    class Patch_PlayerRep_CreateNametag
+    {
+        [HarmonyPostfix]
+        public static void Postfix(PlayerRep __instance)
+        {
+            
+
+
+
+
+        }
+    }*/
 }

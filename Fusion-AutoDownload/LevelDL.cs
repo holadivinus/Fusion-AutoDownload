@@ -31,123 +31,111 @@ namespace FusionAutoDownload
                 mapButton.Item2.Invoke();
                 WaitingMapButtons.Remove(mapButton);
             }
-
-        }
-    }
-
-    [HarmonyPatch]
-    public static class BoneMenuCreator_CreateLobby_Patch
-    {
-        public static MethodBase TargetMethod()
-        {
-            return AccessTools.Method("LabFusion.BoneMenu.BoneMenuCreator:CreateLobby", new[] { typeof(MenuCategory), typeof(LobbyMetadataInfo), typeof(INetworkLobby), typeof(LobbySortMode) });
         }
 
-        public static LobbyMetadataInfo LatestLobbyInfo;
-        public static INetworkLobby LatestLobby;
-        [HarmonyPrefix]
-        static void Prefix(object __instance, MenuCategory category, LobbyMetadataInfo info, INetworkLobby lobby, LobbySortMode sortMode)
+        // Patches
+        [HarmonyPatch]
+        public static class BoneMenuCreator_CreateLobby_Patch
         {
-            LatestLobbyInfo = info;
-            LatestLobby = lobby;
-        }
-    }
-    [HarmonyPatch(typeof(MenuCategory), "CreateFunctionElement", new Type[] { typeof(string), typeof(Color), typeof(Action) })]
-    class MenuCategory_CreateFunctionElement_Patch
-    {
-        private static Dictionary<string, FunctionElement> s_post2Pre = new Dictionary<string, FunctionElement>();
-        [HarmonyPrefix]
-        private static void Prefix(MenuCategory __instance, ref string name, ref Color color, ref Action action)
-        {
-            if (action != null && color == Color.white && name == "Join Server")
+            public static MethodBase TargetMethod()
             {
-                LobbyMetadataInfo info = BoneMenuCreator_CreateLobby_Patch.LatestLobbyInfo;
-                INetworkLobby lobby = BoneMenuCreator_CreateLobby_Patch.LatestLobby;
-                action = () =>
-                {
-                    info.ClientHasLevel = FusionSceneManager.HasLevel(info.LevelBarcode);
-                    lobby.CreateJoinDelegate(info).Invoke();
-                };
+                return AccessTools.Method("LabFusion.BoneMenu.BoneMenuCreator:CreateLobby", new[] { typeof(MenuCategory), typeof(LobbyMetadataInfo), typeof(INetworkLobby), typeof(LobbySortMode) });
             }
-            if (action == null && color == Color.red && name.StartsWith("Level: "))
+
+            public static LobbyMetadataInfo LatestLobbyInfo;
+            public static INetworkLobby LatestLobby;
+            [HarmonyPrefix]
+            static void Prefix(object __instance, MenuCategory category, LobbyMetadataInfo info, INetworkLobby lobby, LobbySortMode sortMode)
             {
-                AutoDownloadMelon.Msg("Map Button Created!");
-                string mapBarcode = BoneMenuCreator_CreateLobby_Patch.LatestLobbyInfo.LevelBarcode;
-                string palletBarcode = mapBarcode.Substring(0, mapBarcode.IndexOf(".Level."));
-
-                if (AutoDownloadMelon.AttemptedPallets.Contains(palletBarcode))
-                    return;
-
-                if (!FusionSceneManager.HasLevel(mapBarcode))
+                LatestLobbyInfo = info;
+                LatestLobby = lobby;
+            }
+        }
+        [HarmonyPatch(typeof(MenuCategory), "CreateFunctionElement", new Type[] { typeof(string), typeof(Color), typeof(Action) })]
+        class MenuCategory_CreateFunctionElement_Patch
+        {
+            private static Dictionary<string, FunctionElement> s_post2Pre = new Dictionary<string, FunctionElement>();
+            [HarmonyPrefix]
+            private static void Prefix(MenuCategory __instance, ref string name, ref Color color, ref Action action)
+            {
+                if (action != null && color == Color.white && name == "Join Server")
                 {
-                    AutoDownloadMelon.Msg("Map not Installed!");
-                    AutoDownloadMelon.Msg(mapBarcode + " - " + palletBarcode);
-
-                    if (AutoDownloadMelon.ModListings.TryGetValue(palletBarcode, out ModListing foundMod))
+                    LobbyMetadataInfo info = BoneMenuCreator_CreateLobby_Patch.LatestLobbyInfo;
+                    INetworkLobby lobby = BoneMenuCreator_CreateLobby_Patch.LatestLobby;
+                    action = () =>
                     {
-                        AutoDownloadMelon.Msg("Map found in some repo!");
-                        bool isPC = false;
-                        foreach (Il2Cpp.KeyValuePair<string, ModTarget> modTarget in foundMod.Targets)
+                        info.ClientHasLevel = FusionSceneManager.HasLevel(info.LevelBarcode);
+                        lobby.CreateJoinDelegate(info).Invoke();
+                    };
+                }
+                if (action == null && color == Color.red && name.StartsWith("Level: "))
+                {
+                    Msg("Map Button Created!");
+                    string mapBarcode = BoneMenuCreator_CreateLobby_Patch.LatestLobbyInfo.LevelBarcode;
+                    string palletBarcode = mapBarcode.Substring(0, mapBarcode.IndexOf(".Level."));
+
+                    if (AttemptedPallets.Contains(palletBarcode))
+                        return;
+
+                    if (!FusionSceneManager.HasLevel(mapBarcode))
+                    {
+                        Msg("Map not Installed!");
+                        Msg(mapBarcode + " - " + palletBarcode);
+
+                        if (ModListings.TryGetValue(palletBarcode, out (ModListing, ModTarget) foundMod))
                         {
-                            if (modTarget.key == "pc")
+                            Msg("Map found in some repo, Button Setup!");
+  
+                            color = Color.yellow;
+                            name += " (Download)";
+
+                            string finName = name;
+                            action = () =>
                             {
-                                AutoDownloadMelon.Msg("Map supported on PC! Button Setup!");
-                                isPC = true;
+                                if (AttemptedPallets.Contains(palletBarcode))
+                                    return;
+                                AttemptedPallets.Add(palletBarcode);
 
-                                color = Color.yellow;
-                                name += " (Download)";
+                                Msg("Downloading map!");
+                                s_post2Pre[finName].SetColor(Color.blue);
+                                s_post2Pre[finName].SetName("Downloading...");
 
-                                string finName = name;
-                                action = () =>
+
+                                LatestModDownloadManager.DownloadMod(foundMod.Item1, foundMod.Item2);
+
+                                WaitingMapButtons.Add((mapBarcode, () =>
                                 {
-                                    if (AutoDownloadMelon.AttemptedPallets.Contains(palletBarcode))
-                                        return;
-                                    AutoDownloadMelon.AttemptedPallets.Add(palletBarcode);
-
-                                    AutoDownloadMelon.Msg("Downloading map!");
-                                    s_post2Pre[finName].SetColor(Color.blue);
-                                    s_post2Pre[finName].SetName("Downloading...");
-                                    
-                                    
-                                    AutoDownloadMelon.LatestModDownloadManager.DownloadMod(foundMod, modTarget.value);
-
-                                    AutoDownloadMelon.WaitingMapButtons.Add((mapBarcode, () => 
+                                    if (s_post2Pre[finName] != null)
                                     {
-                                        if (s_post2Pre[finName] != null)
-                                        {
-                                            s_post2Pre[finName].SetColor(Color.green);
-                                            s_post2Pre[finName].SetName("Download Complete!");
-                                        }
+                                        s_post2Pre[finName].SetColor(Color.green);
+                                        s_post2Pre[finName].SetName("Download Complete!");
+                                    }
 
-                                        
-
-                                        s_post2Pre.Remove(finName);
-                                    }));
-                                };
-                            }
+                                    s_post2Pre.Remove(finName);
+                                }));
+                            };  
                         }
-                        if (!isPC)
-                            AutoDownloadMelon.Msg("Map unsupported on PC.");
                     }
                 }
             }
-        }
-        [HarmonyPostfix]
-        private static void Postfix(MenuCategory __instance, string name, Color color, Action action, FunctionElement __result) 
-        {
-            if (action != null && color == Color.yellow && name.StartsWith("Level: ") && name.EndsWith(" (Download)"))
+            [HarmonyPostfix]
+            private static void Postfix(MenuCategory __instance, string name, Color color, Action action, FunctionElement __result)
             {
-                if (!s_post2Pre.ContainsKey(name))
-                    s_post2Pre.Add(name, __result);
-                else
+                if (action != null && color == Color.yellow && name.StartsWith("Level: ") && name.EndsWith(" (Download)"))
                 {
-                    if (s_post2Pre[name] == null)
-                    {
-                        s_post2Pre.Remove(name);
+                    if (!s_post2Pre.ContainsKey(name))
                         s_post2Pre.Add(name, __result);
+                    else
+                    {
+                        if (s_post2Pre[name] == null)
+                        {
+                            s_post2Pre.Remove(name);
+                            s_post2Pre.Add(name, __result);
+                        }
                     }
                 }
             }
         }
     }
+
 }
