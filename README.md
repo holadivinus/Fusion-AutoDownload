@@ -1,13 +1,13 @@
-# Fusion-AutoDownload
+# Version 0.0.4 (Crash fix + UI Update)
 
 This is my proof of concept auto-download mod! Use at your own risk!
 This mod will let you auto download Levels, Avatars, and Spawnables from the links in your repositories.txt in the games folder.
 
 Heres a video of it working:
+![image goes here](http://img.youtube.com/vi/QK9vDvwSnS4/0.jpg)](http://www.youtube.com/watch?v=QK9vDvwSnS4 "Fusion Autodownload Example")
 
-
-
-[![image goes here](http://img.youtube.com/vi/QK9vDvwSnS4/0.jpg)](http://www.youtube.com/watch?v=QK9vDvwSnS4 "Fusion Autodownload Example")
+Heres what the UI looks like:
+![](https://cdn.discordapp.com/attachments/875811073624784967/1106789018047365180/Avatar.gif)![](https://cdn.discordapp.com/attachments/875811073624784967/1106789018387095572/Spawnable.gif)
 
 1. This mod requires JevilLib, and JevilLib must be launched twice to work
 2. This will probably be pretty laggy
