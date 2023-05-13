@@ -1,21 +1,17 @@
-﻿using BoneLib.BoneMenu.Elements;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+
+using UnityEngine;
+using SLZ.Marrow.Forklift.Model;
+
+using HarmonyLib;
+using BoneLib.BoneMenu.Elements;
 using LabFusion.BoneMenu;
 using LabFusion.Network;
 using LabFusion.Utilities;
-using SLZ.Marrow.Forklift.Model;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml.Linq;
-using UnhollowerBaseLib;
-using HarmonyLib;
-using System.Reflection;
-using UnityEngine;
-using Il2Cpp = Il2CppSystem.Collections.Generic;
-using System.Runtime.CompilerServices;
-using Il2CppMono.Globalization.Unicode;
+
 
 namespace FusionAutoDownload
 {
@@ -55,6 +51,8 @@ namespace FusionAutoDownload
         class MenuCategory_CreateFunctionElement_Patch
         {
             private static Dictionary<string, FunctionElement> s_post2Pre = new Dictionary<string, FunctionElement>();
+
+            private static int buttonNum = 0;
             [HarmonyPrefix]
             private static void Prefix(MenuCategory __instance, ref string name, ref Color color, ref Action action)
             {
@@ -89,7 +87,7 @@ namespace FusionAutoDownload
                             color = Color.yellow;
                             name += " (Download)";
 
-                            string finName = name;
+                            string btKey = buttonNum.ToString();
                             action = () =>
                             {
                                 if (AttemptedPallets.Contains(palletBarcode))
@@ -97,22 +95,28 @@ namespace FusionAutoDownload
                                 AttemptedPallets.Add(palletBarcode);
 
                                 Msg("Downloading map!");
-                                s_post2Pre[finName].SetColor(Color.blue);
-                                s_post2Pre[finName].SetName("Downloading...");
+                                s_post2Pre[btKey].SetColor(Color.blue);
+                                s_post2Pre[btKey].SetName("Downloading...");
 
-
-                                LatestModDownloadManager.DownloadMod(foundMod.Item1, foundMod.Item2);
-
-                                WaitingMapButtons.Add((mapBarcode, () =>
+                                DownloadQueue.Enqueue(() =>
                                 {
-                                    if (s_post2Pre[finName] != null)
-                                    {
-                                        s_post2Pre[finName].SetColor(Color.green);
-                                        s_post2Pre[finName].SetName("Download Complete!");
-                                    }
+                                    Msg("downloading map " + foundMod.Item1.Barcode.ID);
 
-                                    s_post2Pre.Remove(finName);
-                                }));
+                                    DownloadingMods.Add(foundMod.Item2.Cast<DownloadableModTarget>().Url, foundMod.Item1);
+                                    LatestModDownloadManager.DownloadMod(foundMod.Item1, foundMod.Item2);
+
+                                    WaitingMapButtons.Add((mapBarcode, () =>
+                                    {
+                                        if (s_post2Pre[btKey] != null)
+                                        {
+                                            s_post2Pre[btKey].SetColor(Color.green);
+                                            s_post2Pre[btKey].SetName("Download Complete!");
+                                        }
+
+                                        s_post2Pre.Remove(btKey);
+                                    }
+                                    ));
+                                });
                             };  
                         }
                     }
@@ -123,14 +127,15 @@ namespace FusionAutoDownload
             {
                 if (action != null && color == Color.yellow && name.StartsWith("Level: ") && name.EndsWith(" (Download)"))
                 {
-                    if (!s_post2Pre.ContainsKey(name))
-                        s_post2Pre.Add(name, __result);
+                    string btKey = (buttonNum++).ToString();
+                    if (!s_post2Pre.ContainsKey(btKey))
+                        s_post2Pre.Add(btKey, __result);
                     else
                     {
-                        if (s_post2Pre[name] == null)
+                        if (s_post2Pre[btKey] == null)
                         {
-                            s_post2Pre.Remove(name);
-                            s_post2Pre.Add(name, __result);
+                            s_post2Pre.Remove(btKey);
+                            s_post2Pre.Add(btKey, __result);
                         }
                     }
                 }

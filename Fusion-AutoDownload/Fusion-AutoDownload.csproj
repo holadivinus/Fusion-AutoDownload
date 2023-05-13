@@ -46,6 +46,7 @@
     <Reference Include="Il2Cppmscorlib">
       <HintPath>managed\Il2Cppmscorlib.dll</HintPath>
     </Reference>
+    <Reference Include="Il2CppSystem, Version=4.0.0.0, Culture=neutral, PublicKeyToken=null" />
     <Reference Include="JeviLib">
       <HintPath>managed\JeviLib.dll</HintPath>
     </Reference>
@@ -81,6 +82,14 @@
     <Reference Include="UniTask">
       <HintPath>managed\UniTask.dll</HintPath>
     </Reference>
+    <Reference Include="Unity.TextMeshPro, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>managed\Unity.TextMeshPro.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.AssetBundleModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>managed\UnityEngine.AssetBundleModule.dll</HintPath>
+    </Reference>
     <Reference Include="UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>managed\UnityEngine.CoreModule.dll</HintPath>
@@ -88,6 +97,14 @@
     <Reference Include="UnityEngine.InputLegacyModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>managed\UnityEngine.InputLegacyModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.UI, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>managed\UnityEngine.UI.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.UIModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>managed\UnityEngine.UIModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.UnityWebRequestModule">
       <HintPath>managed\UnityEngine.UnityWebRequestModule.dll</HintPath>
@@ -100,8 +117,18 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SpawnableDL.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="uiassets" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>copy "$(TargetPath)" "C:\Program Files (x86)\Steam\steamapps\common\BONELAB\Mods\$(TargetFileName)" /y</PostBuildEvent>
+    <PostBuildEvent>copy "$(TargetPath)" "C:\Program Files (x86)\Steam\steamapps\common\BONELAB\Mods\$(TargetFileName)" /y
+</PostBuildEvent>
+  </PropertyGroup>
+  <PropertyGroup>
+    <PreBuildEvent>del "$(SolutionDir)\UIAssets\*" /Q
+xcopy "$(SolutionDir)\AutoDownloadBundler\Assets\UI" "$(SolutionDir)\UIAssets" /y
+del "$(ProjectDir)\uiassets" /Q
+copy "$(SolutionDir)\UIAssets\uiassets" "$(ProjectDir)\uiassets" /Y</PreBuildEvent>
   </PropertyGroup>
 </Project>
