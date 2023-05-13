@@ -106,11 +106,41 @@ namespace FusionAutoDownload
                     DownloadQueue.Enqueue(() =>
                     {
                         if (name.Contains(".Avatar."))
+                        {
                             OnAvatarCrateAdded(name);
+                            if (ModListings.TryGetValue(name.Split(new string[] { ".Avatar." }, StringSplitOptions.None)[0], out var mod))
+                            {
+                                string url = mod.Item2.Cast<DownloadableModTarget>().Url;
+                                if (DownloadingMods.ContainsKey(url))
+                                {
+                                    DownloadingMods.Remove(url);
+                                }
+                            }
+                        }
                         else if (name.Contains(".Level."))
+                        {
                             OnLevelCrateAdded(name);
+                            if (ModListings.TryGetValue(name.Split(new string[] { ".Level." }, StringSplitOptions.None)[0], out var mod))
+                            {
+                                string url = mod.Item2.Cast<DownloadableModTarget>().Url;
+                                if (DownloadingMods.ContainsKey(url))
+                                {
+                                    DownloadingMods.Remove(url);
+                                }
+                            }
+                        }
                         else if (name.Contains(".Spawnable."))
+                        {
                             OnSpawnableCrateAdded(name);
+                            if (ModListings.TryGetValue(name.Split(new string[] { ".Spawnable." }, StringSplitOptions.None)[0], out var mod))
+                            {
+                                string url = mod.Item2.Cast<DownloadableModTarget>().Url;
+                                if (DownloadingMods.ContainsKey(url))
+                                {
+                                    DownloadingMods.Remove(url);
+                                }
+                            }
+                        }
                     });
                 });
             }));

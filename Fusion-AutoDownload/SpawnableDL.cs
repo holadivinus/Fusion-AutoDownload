@@ -141,22 +141,29 @@ namespace FusionAutoDownload
                     if (AssetWarehouse.Instance.GetCrate<SpawnableCrate>(data.barcode) == null)
                     {
                         string palletBarcode = data.barcode.Substring(0, data.barcode.IndexOf(".Spawnable."));
-                        if (AttemptedPallets.Contains(palletBarcode))
-                        {
-                            ActuallyProcess(data);
-                            return false;
-                        }
-                        AttemptedPallets.Add(palletBarcode);
-
                         Msg("Spawnable failed to load! " + data.barcode);
                         if (ModListings.TryGetValue(palletBarcode, out (ModListing, ModTarget) foundMod))
                         {
                             Msg("Spawnable Found in some Repo, queued for download!");
 
+                            bool downloading = DownloadingMods.ContainsValue(foundMod.Item1);
+                            if (AttemptedPallets.Contains(palletBarcode))
+                            {
+                                if (!downloading)
+                                {
+                                    ActuallyProcess(data);
+                                    return false;
+                                }
+                                Msg("Spawnable extra loader spawning!");
+                            } else AttemptedPallets.Add(palletBarcode);
+
                             DownloadQueue.Enqueue(() =>
                             {
-                                DownloadingMods.Add(foundMod.Item2.Cast<DownloadableModTarget>().Url, foundMod.Item1);
-                                LatestModDownloadManager.DownloadMod(foundMod.Item1, foundMod.Item2);
+                                if (!downloading) 
+                                {
+                                    DownloadingMods.Add(foundMod.Item2.Cast<DownloadableModTarget>().Url, foundMod.Item1);
+                                    LatestModDownloadManager.DownloadMod(foundMod.Item1, foundMod.Item2);
+                                }
 
                                 Msg("Creating Spawnable!");
                                 PendingSpawnable spawnable = new PendingSpawnable(data, () =>

@@ -56,7 +56,7 @@ namespace FusionAutoDownload
             [HarmonyPrefix]
             private static void Prefix(MenuCategory __instance, ref string name, ref Color color, ref Action action)
             {
-                if (action != null && color == Color.white && name == "Join Server")
+                if (action != null && color == Color.white && !__instance.Name.Contains("Manual") && name == "Join Server")
                 {
                     LobbyMetadataInfo info = BoneMenuCreator_CreateLobby_Patch.LatestLobbyInfo;
                     INetworkLobby lobby = BoneMenuCreator_CreateLobby_Patch.LatestLobby;
