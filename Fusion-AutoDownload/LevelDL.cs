@@ -17,6 +17,7 @@ namespace FusionAutoDownload
 {
     public partial class AutoDownloadMelon
     {
+        /*
         public static List<(string, Action)> WaitingMapButtons = new List<(string, Action)> ();
         public static void OnLevelCrateAdded(string barcode)
         {
@@ -98,12 +99,12 @@ namespace FusionAutoDownload
                                 s_post2Pre[btKey].SetColor(Color.blue);
                                 s_post2Pre[btKey].SetName("Downloading...");
 
-                                DownloadQueue.Enqueue(() =>
+                                MainThreadQueue.Enqueue(() =>
                                 {
                                     Msg("downloading map " + foundMod.Item1.Barcode.ID);
 
                                     DownloadingMods.Add(foundMod.Item2.Cast<DownloadableModTarget>().Url, foundMod.Item1);
-                                    LatestModDownloadManager.DownloadMod(foundMod.Item1, foundMod.Item2);
+                                    NewModDownloadManager.DownloadMod(foundMod.Item1, foundMod.Item2);
 
                                     WaitingMapButtons.Add((mapBarcode, () =>
                                     {
@@ -140,7 +141,7 @@ namespace FusionAutoDownload
                     }
                 }
             }
-        }
+        }*/
     }
 
 }
