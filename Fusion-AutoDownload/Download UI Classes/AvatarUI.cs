@@ -86,8 +86,11 @@ namespace FusionAutoDownload
 
                     if (!success)
                     {
-                        mod.TryDownload();
-                        _statusImage.color = mod.Downloading ? Color.yellow : Color.red;
+                        mod.TryDownload(() => 
+                        { 
+                            if (_statusImage != null)
+                                _statusImage.color = mod.Downloading ? Color.yellow : Color.red;
+                        });
                     } else _statusImage.color = Color.white;
                 }
                 else _statusImage.color = success ? Color.white : Color.red;

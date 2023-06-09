@@ -1,53 +1,97 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 
-using UnityEngine;
-using Cysharp.Threading.Tasks;
 using SLZ.Marrow.Forklift;
-using SLZ.Marrow.Forklift.Model;
 using SLZ.Marrow.Warehouse;
 
-using Il2Cpp = Il2CppSystem.Collections.Generic;
 using MelonLoader;
 using System.IO;
-using LabFusion.Data;
-using HarmonyLib;
-using System.Runtime.InteropServices;
-using System.Linq;
-using UnityEngine.Networking;
 using System.Collections.Concurrent;
-using static FusionAutoDownload.UIClasses.MenuMapUI;
 using UnityEngine.SceneManagement;
-using SLZ.Marrow.SceneStreaming;
-using static FusionAutoDownload.Download_UI_Classes.LevelLoadUI;
+using FusionAutoDownload.Download_UI_Classes;
+using SLZ.Marrow;
+using Newtonsoft.Json;
+using SLZ.Marrow.Forklift.Model;
+using System.Net.Http;
+using System.Security.Policy;
+using System.Threading;
 
 namespace FusionAutoDownload
 {
     public partial class AutoDownloadMelon : MelonMod
     {
-        /// <summary>
-        /// Creates a new ModDownloadManager for every query; A one time use class
-        /// </summary>
-        public static ModDownloadManager NewModDownloadManager { get => new ModDownloadManager(); }
+        #region Saved Preferences
+        private static MelonPreferences_Category s_preferences = MelonPreferences.CreateCategory("Fusion-Autodownloader");
 
-        public override void OnLateInitializeMelon() // U
+        public class ModsSettings : Dictionary<string, ModWrapper.ModSettings> { }
+        private static MelonPreferences_Entry<string[]> s_modsSettings = s_preferences.CreateEntry("ModsSettings", new string[] { });
+        public static ModsSettings ModSettings;
+
+        private static MelonPreferences_Entry<int> s_modSizeLimit = s_preferences.CreateEntry("ModSizeLimit", -1);
+        public static int ModSizeLimit { get => s_modSizeLimit.Value; set => s_modSizeLimit.Value = value; }
+
+        private static MelonPreferences_Entry<bool> s_willDeleteDefault = s_preferences.CreateEntry("WillDeleteDefault", true);
+        public static bool WillDeleteDefault { get => s_willDeleteDefault.Value; set => s_willDeleteDefault.Value = value; }
+
+        private static MelonPreferences_Entry<bool> s_willUpdateDefault = s_preferences.CreateEntry("WillUpdateDefault", true);
+        public static bool WillUpdateDefault { get => s_willUpdateDefault.Value; set => s_willUpdateDefault.Value = value; }
+        #endregion 
+
+        public override void OnEarlyInitializeMelon()
+        {
+            // Add Default repositories.txt
+            string modDirectory = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+            string filePath = Path.Combine(modDirectory, "repositories.txt");
+            string contentToWrite = "https://blrepo.laund.moe/repository.json";
+            Msg(filePath);
+
+            if (!File.Exists(filePath))
+            {
+                // Create the file if it doesn't exist
+                using (StreamWriter writer = File.CreateText(filePath))
+                {
+                    writer.Write(contentToWrite);
+                    Msg("repo file not found, default for modio created!");
+                }
+            }
+
+            // Parse saved ModSettings, cant use any normal serialization or deserialization for garbage reasons
+            ModSettings = new ModsSettings();
+            foreach (string setting in s_modsSettings.Value)
+            {
+                string[] sets = setting.Split(',');
+                ModWrapper.ModSettings curSettings = new ModWrapper.ModSettings();
+                for (int i = 0; i < sets.Length; i++)
+                {
+                    switch (i)
+                    {
+                        case 1:
+                            if (bool.TryParse(sets[i], out bool blocked))
+                                curSettings.Blocked = blocked;
+                            break;
+                        case 2:
+                            if (bool.TryParse(sets[i], out bool updSave))
+                                curSettings.AutoUpdate = updSave;
+                            else curSettings.AutoUpdate = WillDeleteDefault;
+                            break;
+                    }
+                }
+                ModSettings.Add(sets[0], curSettings);
+            }
+        }
+
+        public override void OnLateInitializeMelon()
         {
             new HarmonyLib.Harmony($"Holadivinus.{nameof(AutoDownloadMelon)}.(0.0.6)")
             .PatchAll();
 
-            RepoWrapper.ModDownloadProgress_Patch.Patch();
-
             RepoWrapper.FetchRepos();
-            
+
+
             // On Warehouse Ready -> OnCrateAdded -> RepoWrapper.OnCrateComplete
             AssetWarehouse.OnReady(new Action(() => AssetWarehouse.Instance.OnCrateAdded += (Action<string>)RepoWrapper.OnCrateComplete)); // < !U
 
-            SceneManager.activeSceneChanged += new Action<Scene, Scene>((a, b) => 
-            {
-                Msg("From: " + a.name);
-                Msg("To: " + b.name);
-            });
+            AutoDownloadMenu.Setup();
         }
 
         public static void Msg(object msg)
@@ -61,18 +105,36 @@ namespace FusionAutoDownload
         public static ConcurrentQueue<Action> UnityThread = new ConcurrentQueue<Action>();
         public override void OnLateUpdate()
         {
-            RepoWrapper.OnLateUpdate();
-
             if (UnityThread.Count > 0)
                 if (UnityThread.TryDequeue(out Action code))
                     code.Invoke();
+        }
 
-            if (Input.GetKeyDown(KeyCode.Y))
+        public override void OnApplicationQuit()
+        {
+            List<string> modSettingsSave = new List<string>();
+
+            foreach (ModWrapper mod in RepoWrapper.AllMods)
             {
-                Msg("Y DOWN!!");
-                SceneStreamer.Session.End();
-                SceneStreamer.Load(SceneManager_LoadSceneAsync_Patch.TargetServerScene);
+                if (mod.Installed && !mod.Keeping)
+                {
+                    Directory.Delete(Path.Combine(MarrowSDK.RuntimeModsPath, mod.Barcode), true);
+                }
+
+                if (mod.NeedsSave) 
+                {
+                    ModWrapper.ModSettings settings;
+
+                    if (!ModSettings.TryGetValue(mod.Barcode, out settings))
+                        ModSettings.Add(mod.Barcode, settings = new ModWrapper.ModSettings());
+
+                    settings.Blocked = mod.Blocked;
+                    settings.AutoUpdate = mod.AutoUpdate;
+
+                    modSettingsSave.Add($"{mod.Barcode},{mod.Blocked},{mod.AutoUpdate}");
+                }
             }
+            s_modsSettings.Value = modSettingsSave.ToArray();
         }
     }
 }

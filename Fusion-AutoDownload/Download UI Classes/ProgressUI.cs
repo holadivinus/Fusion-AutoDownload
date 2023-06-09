@@ -22,14 +22,13 @@ namespace FusionAutoDownload
     public abstract class ProgressUI
     {
         #region Asset Loading
-        public static AssetBundle UIBundle = EmbeddedAssetBundle.LoadFromAssembly(System.Reflection.Assembly.GetExecutingAssembly(), "FusionAutoDownload.uiassets");
         public static GameObject UIAssetAvatar
         {
             get
             {
                 if (s_uiAssetAvatarInternal == null)
                 {
-                    s_uiAssetAvatarInternal = UIBundle.LoadAsset("Assets/UI/AutoDownload UI.prefab").Cast<GameObject>();
+                    s_uiAssetAvatarInternal = RepoWrapper.UIBundle.LoadAsset("Assets/UI/AutoDownload UI.prefab").Cast<GameObject>();
                 }
                 return s_uiAssetAvatarInternal;
             }
@@ -41,7 +40,7 @@ namespace FusionAutoDownload
             {
                 if (s_uiAssetSpawnableInternal == null)
                 {
-                    s_uiAssetSpawnableInternal = UIBundle.LoadAsset("Assets/UI/SpawnableUI.prefab").Cast<GameObject>();
+                    s_uiAssetSpawnableInternal = RepoWrapper.UIBundle.LoadAsset("Assets/UI/SpawnableUI.prefab").Cast<GameObject>();
                 }
                 return s_uiAssetSpawnableInternal;
             }
@@ -54,8 +53,8 @@ namespace FusionAutoDownload
                 if (s_uiSpritesInternal == null || s_uiSpritesInternal[0] == null)
                 {
                     s_uiSpritesInternal = new Sprite[2];
-                    s_uiSpritesInternal[0] = UIBundle.LoadAsset("Assets/UI/AutoDownload UI/PersonIcon.png").Cast<Sprite>();
-                    s_uiSpritesInternal[1] = UIBundle.LoadAsset("Assets/UI/AutoDownload UI/PersonIconX.png").Cast<Sprite>();
+                    s_uiSpritesInternal[0] = RepoWrapper.UIBundle.LoadAsset("Assets/UI/AutoDownload UI/PersonIcon.png").Cast<Sprite>();
+                    s_uiSpritesInternal[1] = RepoWrapper.UIBundle.LoadAsset("Assets/UI/AutoDownload UI/PersonIconX.png").Cast<Sprite>();
                 }
                 return s_uiSpritesInternal;
             }
@@ -87,8 +86,6 @@ namespace FusionAutoDownload
             get => _mod_field;
             set
             {
-                Msg("set");
-
                 if (_mod_field != null)
                     _mod_field.CrateComplete -= OnCrateAdded;
 

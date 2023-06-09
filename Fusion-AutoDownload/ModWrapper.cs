@@ -1,4 +1,5 @@
 ﻿using Cysharp.Threading.Tasks;
+using Newtonsoft.Json.Linq;
 using SLZ.Marrow;
 using SLZ.Marrow.Forklift.Model;
 using SLZ.Marrow.Warehouse;
@@ -9,8 +10,10 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using UnhollowerBaseLib.Attributes;
 using UnityEngine;
 using UnityEngine.Networking;
+using MelonLoader;
 
 namespace FusionAutoDownload
 {
@@ -22,7 +25,14 @@ namespace FusionAutoDownload
             ModTarget = modTarget;
             DownloadableModTarget = ModTarget.Cast<DownloadableModTarget>();
 
-            Installed = Directory.Exists(Path.Combine(MarrowSDK.RuntimeModsPath, Barcode));
+            Keeping = Installed = Directory.Exists(Path.Combine(MarrowSDK.RuntimeModsPath, Barcode));
+
+            if (AutoDownloadMelon.ModSettings.TryGetValue(Barcode, out ModSettings settings))
+            {
+                Blocked = settings.Blocked;
+                AutoUpdate = settings.AutoUpdate;
+            }
+            else AutoUpdate = AutoDownloadMelon.WillUpdateDefault;
         }
 
         public ModListing ModListing;
@@ -31,42 +41,105 @@ namespace FusionAutoDownload
 
         public ModTarget ModTarget;
         public DownloadableModTarget DownloadableModTarget;
+        public Sprite Thumbnail;
         public string Url { get => DownloadableModTarget.Url; }
 
         public bool Installed;
         public bool Downloading;
+        public bool Keeping;
+
+        public bool NeedsSave { get => Blocked || ((AutoUpdate != AutoDownloadMelon.WillUpdateDefault) && Installed) ; }
         public bool Blocked;
+        public bool AutoUpdate;
 
-        public void TryDownload() // U
+        public struct ModSettings
         {
-            if (!Downloading && !Installed && !Blocked)
-            {
-                Downloading = true;
+            public bool Blocked;
+            public bool AutoUpdate;
+        }
 
-                Msg("Downloading mod: " + Barcode);
-                RepoWrapper.DownloadingMods.Add(Barcode, this);
-                AutoDownloadMelon.NewModDownloadManager.DownloadMod(ModListing, ModTarget);
+        public void TryUpdate()
+        {
+            if (!AutoUpdate)
+                return;
+
+            try
+            {
+                string oldJson = File.ReadAllText(Path.Combine(MarrowSDK.RuntimeModsPath, Barcode, "pallet.json"));
+
+                JObject jsonObject = JObject.Parse(oldJson);
+                string crateVersion = jsonObject["objects"]["o:1"]["version"].Value<string>();
+
+                bool needsUpdate = false;
+
+                if (int.TryParse(Version, out int l) && int.TryParse(crateVersion, out int r))
+                    needsUpdate = l > r;
+                if (!needsUpdate)
+                    needsUpdate = new Version(Version) > new Version(crateVersion);
+
+                if (needsUpdate)
+                {
+                    string folderPath = Path.Combine(MarrowSDK.RuntimeModsPath, Barcode);
+                    DirectoryInfo directory = new DirectoryInfo(folderPath);
+
+                    AssetWarehouse.Instance.UnloadPallet(Barcode);
+
+                    foreach (FileInfo file in directory.GetFiles())
+                        file.Delete();
+
+                    foreach (DirectoryInfo subdirectory in directory.GetDirectories())
+                        subdirectory.Delete(true);
+                    
+                    Installed = false;
+
+                    AutoDownloadMelon.UnityThread.Enqueue(() =>
+                    {
+                        TryDownload();
+                        Msg("Updating!!");
+                    });
+                }
+            } catch(Exception ex) 
+            {
+                Msg("Failed to compare versions:");
+                Msg(ex);
             }
         }
 
-        public void OnDownloadProgress(UnityWebRequest uwr, float progress) // !U
+        public void TryDownload(Action onTried = null) // U
         {
-            Progress = progress;
-            _downloadedMB = uwr.downloadedBytes / 1e+6f;
+            if (!Downloading && !Installed && !Blocked)
+            {
+                Action onReady = () =>
+                {
+                    Downloading = true;
+
+                    Msg("Downloading mod: " + Barcode);
+                    RepoWrapper.DownloadingMods.Add(Barcode, this);
+                    DownloadManager.StartDownload(this);
+
+                    onTried?.Invoke();
+                };
+                if (AutoDownloadMelon.ModSizeLimit != -1)
+                    RepoWrapper.GetURLFileSize(Url, (bytes) =>
+                    {
+                        if (bytes != -1 && ((bytes / 1e+6f) < AutoDownloadMelon.ModSizeLimit))
+                            onReady.Invoke();
+                    });
+                else onReady.Invoke();
+            }
         }
 
-        public volatile float Progress; // ?
-        private volatile float _downloadedMB; // ?
+        public void OnDownloadProgress(UnityWebRequest uwr) // U
+        {
+            Progress = uwr.downloadProgress;
+            Percent = Mathf.RoundToInt(uwr.downloadProgress * 100).ToString() + '%';
+            MB = $"{Mathf.RoundToInt(uwr.downloadedBytes / 1e+6f)}mb / {Mathf.RoundToInt((uwr.downloadedBytes / 1e+6f) / uwr.downloadProgress)}mb";
+            Msg($"{Barcode}: " + MB);
+        }
+
+        public float Progress;
         public string Percent;
         public string MB;
-
-        public void CacheDownloadProgressStrings()
-        {
-            Percent = Mathf.RoundToInt(Progress * 100).ToString() + '%';
-            MB = $"{Mathf.RoundToInt(_downloadedMB)}mb / {Mathf.RoundToInt(_downloadedMB / Progress)}mb";
-
-            Msg(MB + " " + Barcode);
-        }
 
         public Action<string> CrateComplete = delegate { };
         public void OnCrateComplete(string crateBarcode) // U

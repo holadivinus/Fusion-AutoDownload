@@ -32,7 +32,7 @@ namespace FusionAutoDownload.UIClasses
             _mod = mod;
             _originalName = _functionElement.Name;
             _functionElement.SetName("Download " + _originalName);
-            _functionElement.SetColor(Color.yellow);
+            _functionElement.SetColor(mod.Downloading ? Color.cyan : Color.yellow);
 
             RepoWrapper.GetURLFileSize(_mod.Url, bytes =>
             {
@@ -45,23 +45,24 @@ namespace FusionAutoDownload.UIClasses
         private string _originalName;
         private FunctionElement _functionElement;
 
-        private bool _complete;
         private bool _downloadState;
         private void onClick()
         {
             if (!_mod.Downloading && !_mod.Installed)
             {
-                _mod.TryDownload();
-                if (_mod.Downloading)
-                {
-                    _functionElement.SetColor(Color.cyan);
-                    _functionElement.SetName("Downloading...");
-                }
-                else
-                {
-                    _functionElement.SetColor(Color.red);
-                    _functionElement.SetName("Download Blocked");
-                }
+                _mod.TryDownload(() => 
+                { 
+                    if (_mod.Downloading)
+                    {
+                        _functionElement.SetColor(Color.cyan);
+                        _functionElement.SetName("Downloading...");
+                    }
+                    else
+                    {
+                        _functionElement.SetColor(Color.red);
+                        _functionElement.SetName("Download Blocked");
+                    }
+                });
             }
             else if (_mod.Downloading)
                 _downloadState = !_downloadState;
@@ -116,11 +117,24 @@ namespace FusionAutoDownload.UIClasses
                 LobbyMetadataInfo info = BoneMenuCreator_CreateLobby_Patch.LatestLobbyInfo;
                 if (action != null && color == Color.white && !__instance.Name.Contains("Manual") && name == "Join Server")
                 {
+                    Msg(__instance.Name);
+
                     INetworkLobby lobby = BoneMenuCreator_CreateLobby_Patch.LatestLobby;
+
+                    info.ClientHasLevel = true;
+                    Action onHas = lobby.CreateJoinDelegate(info);
+
+                    info.ClientHasLevel = false;
+                    Action onNotHas = lobby.CreateJoinDelegate(info);
+
+                    info.ClientHasLevel = FusionSceneManager.HasLevel(info.LevelBarcode);
+
                     FunctionElement_Action_setter.SetValue(__result, new Action(() =>
                     {
-                        info.ClientHasLevel = true;// FusionSceneManager.HasLevel(info.LevelBarcode);
-                        lobby.CreateJoinDelegate(info).Invoke();
+                        if (info.ClientHasLevel = FusionSceneManager.HasLevel(info.LevelBarcode))
+                            onHas.Invoke();
+                        else
+                            onNotHas.Invoke();
                     }));
                 } else if (action == null && color == Color.red && name.StartsWith("Level: "))
                 {

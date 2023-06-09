@@ -69,6 +69,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.IO.Compression" />
     <Reference Include="System.IO.Compression.FileSystem" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -86,9 +87,17 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>managed\Unity.TextMeshPro.dll</HintPath>
     </Reference>
+    <Reference Include="UnityEngine.AnimationModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>managed\UnityEngine.AnimationModule.dll</HintPath>
+    </Reference>
     <Reference Include="UnityEngine.AssetBundleModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>managed\UnityEngine.AssetBundleModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.AudioModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>managed\UnityEngine.AudioModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -109,12 +118,16 @@
     <Reference Include="UnityEngine.UnityWebRequestModule">
       <HintPath>managed\UnityEngine.UnityWebRequestModule.dll</HintPath>
     </Reference>
+    <Reference Include="UnityEngine.UnityWebRequestTextureModule">
+      <HintPath>managed\UnityEngine.UnityWebRequestTextureModule.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Download UI Classes\AutoDownloadMenu.cs" />
     <Compile Include="Download UI Classes\AvatarUI.cs" />
     <Compile Include="Download UI Classes\LevelLoadUI.cs" />
-    <Compile Include="ProgressUI.cs" />
-    <Compile Include="LevelDL.cs" />
+    <Compile Include="Download UI Classes\ProgressUI.cs" />
+    <Compile Include="DownloadManager.cs" />
     <Compile Include="MainMelon.cs" />
     <Compile Include="ModWrapper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

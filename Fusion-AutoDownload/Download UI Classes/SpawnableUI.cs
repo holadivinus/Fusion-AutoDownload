@@ -10,6 +10,10 @@ using SLZ.Marrow.Warehouse;
 using LabFusion.Exceptions;
 using LabFusion.Extensions;
 using System.Collections;
+using System.Reflection.Emit;
+using System.Collections.Generic;
+using System.Reflection;
+using LabFusion.Utilities;
 
 namespace FusionAutoDownload
 {
@@ -104,6 +108,37 @@ namespace FusionAutoDownload
         }
 
         // Patches
+        [HarmonyPatch(typeof(FusionMessageHandler), "HandleMessage_Internal")]
+        public class FusionMessageHandlerPatch
+        {
+            [HarmonyTranspiler]
+            public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+            {
+                var codes = new List<CodeInstruction>(instructions);
+                for (int i = 0; i < codes.Count; i++)
+                {
+                    if (codes[i].opcode == OpCodes.Call &&
+                        codes[i].operand is MethodInfo mi &&
+                        mi.Name == "Return" &&
+                        mi.DeclaringType.Name == "ByteRetriever")
+                    {
+                        // Simply remove the instruction
+                        codes.RemoveAt(i);
+                        // Also remove the previous "ldarg.0" instruction that pushes argument onto the stack for the call
+                        codes.RemoveAt(i - 1);
+                        break;
+                    }
+                }
+
+                return codes;
+            }
+            [HarmonyPostfix]
+            public static void Postfix(FusionMessageHandler __instance, byte[] bytes, bool isServerHandled)
+            {
+                if (!(__instance is SpawnResponseMessage))
+                    ByteRetriever.Return(bytes);
+            }
+        }
         [HarmonyPatch(typeof(SpawnResponseMessage), "HandleMessage", new Type[] { typeof(byte[]), typeof(bool) })]
         class SpawnResponseMessage_HandleMessage_Patch
         {
@@ -143,28 +178,30 @@ namespace FusionAutoDownload
                         // if in a repo
                         if (RepoWrapper.Barcode2Mod.TryGetValue(palletBarcode.Value.Item1, out ModWrapper mod))
                         {
-                            mod.TryDownload();
-                            if (mod.Downloading == true)
-                                new SpawnableUI(data, mod, () => { ActuallyProcess(data); });
-                            else ActuallyProcess(data);
+                            mod.TryDownload(() => 
+                            { 
+                                if (mod.Downloading)
+                                    new SpawnableUI(data, mod, () => { ActuallyProcess(data, bytes, reader); });
+                                else ActuallyProcess(data, bytes, reader);
+                            });
                             return false;
                         }
                         else // not in a repo
                         {
-                            ActuallyProcess(data);
+                            ActuallyProcess(data, bytes, reader);
                             return false;
                         }
                     }
                     else //invalid barcode
                     {
-                        ActuallyProcess(data);
+                        ActuallyProcess(data, bytes, reader);
                         return false;
                     }
                 }
                 else 
                     throw new ExpectedClientException();
             }
-            public static void ActuallyProcess(SpawnResponseData data)
+            public static void ActuallyProcess(SpawnResponseData data, byte[] bytes, FusionReader reader)
             {
                 var crateRef = new SpawnableCrateReference(data.barcode);
 
@@ -185,6 +222,9 @@ namespace FusionAutoDownload
                 NullableMethodExtensions.PoolManager_Spawn(spawnable, data.serializedTransform.position, data.serializedTransform.rotation.Expand(), null,
                     true, null, (Action<GameObject>)((go) => { SpawnResponseMessage.OnSpawnFinished(owner, barcode, syncId, go, path, hand); }), null);
 
+                ByteRetriever.Return(bytes);
+                data.Dispose();
+                reader.Dispose();
             }
         }
     }

@@ -1,9 +1,14 @@
 ﻿using Cysharp.Threading.Tasks;
 using HarmonyLib;
 using Jevil;
+using LabFusion.Data;
 using MelonLoader;
+using MelonLoader.TinyJSON;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using SLZ.Marrow.Forklift;
 using SLZ.Marrow.Forklift.Model;
+using SLZ.Marrow.Warehouse;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,15 +18,22 @@ using System.Security.Policy;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using UnhollowerBaseLib;
+using UnityEngine;
 using UnityEngine.Networking;
+using static Il2CppSystem.Globalization.CultureInfo;
 using Il2Cpp = Il2CppSystem.Collections.Generic;
+using Newtonsoft.Json.Linq;
+using Il2CppSystem.Security.Util;
 
 namespace FusionAutoDownload
 {
     public static class RepoWrapper
     {
+        public static AssetBundle UIBundle = EmbeddedAssetBundle.LoadFromAssembly(System.Reflection.Assembly.GetExecutingAssembly(), "FusionAutoDownload.uiassets");
         public const string Platform = "pc";
 
+        public static ModWrapper[] AllMods;
         public static Dictionary<string, ModWrapper> Barcode2Mod = new Dictionary<string, ModWrapper>();
         public static Dictionary<string, ModWrapper> Url2Mod = new Dictionary<string, ModWrapper>();
 
@@ -30,13 +42,23 @@ namespace FusionAutoDownload
 
         #region Repo Fetching
         public static async void FetchRepos() // U
-        {
-            Il2Cpp.List<ModRepository> fetchedRepos = await AutoDownloadMelon.NewModDownloadManager.FetchRepositoriesAsync("");
+        { 
+            Il2Cpp.List<ModRepository> fetchedRepos = await new ModDownloadManager().FetchRepositoriesAsync("Mods/");
+
             foreach (ModRepository modRepo in fetchedRepos)
             {
                 AddRepo(modRepo);
             }
+            AllMods = Barcode2Mod.Values.ToArray();
             Msg(Barcode2Mod.Count.ToString() + " Downloadable Mods!");
+
+            // Manage Auto-Update
+            AutoDownloadMelon.UnityThread.Enqueue(() =>
+            {
+                foreach (ModWrapper mod in Barcode2Mod.Values.Where(mod => mod.Installed))
+                    mod.TryUpdate();
+                DownloadManager.StartDownload(Barcode2Mod["EXODUSKS.MilesFutureSuit"]);
+            });
         }
         public static void AddRepo(ModRepository repo) // U
         {
@@ -95,76 +117,17 @@ namespace FusionAutoDownload
                 return (match.Groups[1].Value, match.Groups[2].Value);
             else return null;
         }
-        /*public static void TryGetCrate(string crateBarcode)
-        {
-            var palletBarcode = GetPalletBarcode(crateBarcode);
-            if (palletBarcode.HasValue)
-                if (Barcode2Mod.TryGetValue(palletBarcode.Value.Item1, out ModWrapper foundMod))
-                    foundMod.TryDownload();
-        }*/
 
-        public static void OnLateUpdate() // U
-        {
-            foreach (ModWrapper mod in DownloadingMods.Values)
-                mod.CacheDownloadProgressStrings();
-        }
-
-        public static void OnPalletProgress(UnityWebRequest uwr, float progress) // !U
-        {
-            if (Url2Mod.TryGetValue(uwr.url, out ModWrapper mod))
-            {
-                mod.OnDownloadProgress(uwr, progress);
-            }
-        }
         public static void OnCrateComplete(string crateBarcode) // U
         {
             AutoDownloadMelon.UnityThread.Enqueue(() =>
             {
+                Msg(crateBarcode);
                 var crate = GetPalletBarcode(crateBarcode);
                 if (crate.HasValue)
                     if (Barcode2Mod.TryGetValue(crate.Value.Item1, out ModWrapper mod))
                         mod.OnCrateComplete(crateBarcode);
             });
-        }
-
-        // Relevant Patching
-        public class ModDownloadProgress_Patch
-        {
-            private static MDMProgressPatchDelegate _original;
-
-            public delegate void MDMProgressPatchDelegate(IntPtr instance, IntPtr FileDownloader, IntPtr taskItem, float progress, IntPtr method);
-
-            // Exampled from main fusion mod
-            public unsafe static void Patch() // U
-            {
-                MDMProgressPatchDelegate patch = MDMProgress;
-
-                // Mouthful
-                string nativeInfoName = "NativeMethodInfoPtr_ModDownloadManager_OnDownloadProgressed_Private_Void_FileDownloader_TaskItem_Single_0";
-
-                var tgtPtr = *(IntPtr*)(IntPtr)typeof(ModDownloadManager).GetField(nativeInfoName, AccessTools.all).GetValue(null);
-                var dstPtr = patch.Method.MethodHandle.GetFunctionPointer();
-
-                MelonUtils.NativeHookAttach((IntPtr)(&tgtPtr), dstPtr);
-                _original = Marshal.GetDelegateForFunctionPointer<MDMProgressPatchDelegate>(tgtPtr);
-            }
-
-            private static void MDMProgress(IntPtr instance, IntPtr fileDownloader, IntPtr taskItem, float progress, IntPtr method) // !U
-            {
-                UnityWebRequest uwr = new FileDownloader(fileDownloader)._inflight[0];
-
-                // Errors in a Native Patch insta-crash w/out logs.
-                try
-                {
-                    OnPalletProgress(uwr, progress);
-                }
-                catch (Exception e)
-                {
-                    Msg("Error caught in Native Patch MDMProgress:");
-                    Msg(e);
-                }
-                _original(instance, fileDownloader, taskItem, progress, method);
-            }
         }
 
         public static async void GetURLFileSize(string url, Action<long> callback)
@@ -203,6 +166,47 @@ namespace FusionAutoDownload
             }
         }
 
+        public class SmallCrate
+        {
+            public string CrateTitle;
+            public string CrateDescription;
+            public string CrateType;
+        }
+        public static void GetPalletFromURL(string manifestURL, Action<List<SmallCrate>> onDownload)
+        {
+            UnityWebRequest webRequest = UnityWebRequest.Get(manifestURL);
+            UnityWebRequestAsyncOperation req = webRequest.SendWebRequest();
+            req.m_completeCallback += new Action<AsyncOperation>(operation =>
+            {
+                try
+                {
+                    JObject jsonObject = JObject.Parse(webRequest.downloadHandler.text);
+                    JArray cratesArray = (JArray)jsonObject["objects"]["o:1"]["crates"];
+
+                    List<SmallCrate> foundCrates = new List<SmallCrate>();
+
+                    foreach (JObject crate in cratesArray)
+                    {
+                        string refId = crate["ref"].ToString();
+                        string crateTitle = jsonObject["objects"][refId]["title"].ToString();
+                        string crateDescription = jsonObject["objects"][refId]["description"].ToString();
+
+                        string typeId = crate["type"].ToString();
+                        string typeName = jsonObject["types"][typeId]["fullname"].ToString();
+
+                        foundCrates.Add(new SmallCrate()
+                        {
+                            CrateTitle = crateTitle,
+                            CrateDescription = crateDescription,
+                            CrateType = typeName
+                        });
+                    }
+
+                    AutoDownloadMelon.UnityThread.Enqueue(() => onDownload(foundCrates));
+                }
+                catch (Exception) { }
+            });
+        }
 
         public static void Msg(object msg) => AutoDownloadMelon.Msg(msg);
     }
