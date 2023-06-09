@@ -1,24 +1,33 @@
-# Version 0.0.4 (Crash fix + UI Update)
+
+# Version 0.0.6 (Mod Management Update)
 
 This is my proof of concept auto-download mod! Use at your own risk!
-This mod will let you auto download Levels, Avatars, and Spawnables from the links in your repositories.txt in the games folder.
+This mod will let you auto download Levels, Avatars, and Spawnables from the links in your repositories.txt in the Mods folder. 
 
-Heres a video of it working:
-
+Heres a (old pre-ui) video of it working:
 [![IMAGE ALT TEXT](http://img.youtube.com/vi/QK9vDvwSnS4/0.jpg)](http://www.youtube.com/watch?v=QK9vDvwSnS4 "Fusion Autodownload Example")
 
-Heres what the UI looks like:
+Heres what the World UI looks like:
 
 ![](https://cdn.discordapp.com/attachments/875811073624784967/1106789018047365180/Avatar.gif)![](https://cdn.discordapp.com/attachments/875811073624784967/1106789018387095572/Spawnable.gif)
 
-1. This mod requires JevilLib, and JevilLib must be launched twice to work
-2. This will probably be pretty laggy
-3. I'm not responsible if someone crashes you with their mods
-4. This mod doesnt clear the downloaded mods (yet), make sure you have a lot of hard drive space
-5. This mod will only download from the repositories.txt file in the BONELABS folder (where the .exe is stored)
-6. This mod wont manage updates for your mods at all
-7. Good luck stay safe
+Here's what the Menu UI feels like:
+[![IMAGE ALT TEXT](http://img.youtube.com/vi/Qkr9XrRAltg/0.jpg)](http://www.youtube.com/watch?v=Qkr9XrRAltg "Fusion Autodownload Menu UI Example")
 
-Message me if there are bugs or if you cant set it up (discord: holadivinus#9244)
+This mod:
+1. Requires JevilLib.
+2. Will probably be pretty laggy
+3. Will get SFW mods from mod.io (default)
+4. Can get mods from anywhere you link (add repo links to "repositories.txt", in your code mods folder.)
+5. Will autodelete mods (per-mod & global default toggle)
+6. Will autoupdate mods (per-mod & global default toggle)
+7. Will allow you to Block mods from being downloaded.
 
-source: https://github.com/holadivinus/Fusion-AutoDownload
+Planned:
+1. Mod Search bar
+2. ModioNetworker packets
+3. Repo Manager
+   
+Message me if there are bugs, or if you cant set it up. (discord: holadivinus)
+
+Source: https://github.com/holadivinus/Fusion-AutoDownload
