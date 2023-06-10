@@ -93,7 +93,6 @@ namespace FusionAutoDownload
 
             AutoDownloadMenu.Setup();
         }
-
         public static void Msg(object msg)
         {
 #if DEBUG

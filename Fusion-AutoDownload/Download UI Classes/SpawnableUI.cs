@@ -14,6 +14,9 @@ using System.Reflection.Emit;
 using System.Collections.Generic;
 using System.Reflection;
 using LabFusion.Utilities;
+using MelonLoader;
+using System.Linq;
+using System.Linq.Expressions;
 
 namespace FusionAutoDownload
 {
@@ -108,35 +111,33 @@ namespace FusionAutoDownload
         }
 
         // Patches
-        [HarmonyPatch(typeof(FusionMessageHandler), "HandleMessage_Internal")]
-        public class FusionMessageHandlerPatch
+        [HarmonyPatch]
+        public static class FusionMessageHandler_MoveNext_Patch
         {
-            [HarmonyTranspiler]
             public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
             {
-                var codes = new List<CodeInstruction>(instructions);
-                for (int i = 0; i < codes.Count; i++)
-                {
-                    if (codes[i].opcode == OpCodes.Call &&
-                        codes[i].operand is MethodInfo mi &&
-                        mi.Name == "Return" &&
-                        mi.DeclaringType.Name == "ByteRetriever")
-                    {
-                        // Simply remove the instruction
-                        codes.RemoveAt(i);
-                        // Also remove the previous "ldarg.0" instruction that pushes argument onto the stack for the call
-                        codes.RemoveAt(i - 1);
-                        break;
-                    }
-                }
-
-                return codes;
+                List<CodeInstruction> output = instructions.ToList();
+                output[output.Count - 3] = new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(FusionMessageHandler_MoveNext_Patch), nameof(ProperPost)));
+                output[output.Count - 4] = new CodeInstruction(OpCodes.Ldarg_0);
+                output[output.Count - 5] = new CodeInstruction(OpCodes.Nop);
+                return instructions;
             }
-            [HarmonyPostfix]
-            public static void Postfix(FusionMessageHandler __instance, byte[] bytes, bool isServerHandled)
+
+            private static Type _nestedType = typeof(FusionMessageHandler).GetNestedTypes(BindingFlags.NonPublic)[0];
+            private static FieldInfo _state = _nestedType.GetField("<>1__state", AccessTools.all);
+            private static FieldInfo _awaitable = _nestedType.GetField("<awaitable>5__2", AccessTools.all);
+            private static FieldInfo _self = _nestedType.GetField("<>4__this", AccessTools.all);
+            private static FieldInfo _bytes = _nestedType.GetField("bytes", AccessTools.all);
+            public static MethodBase TargetMethod() => AccessTools.Method(_nestedType, "MoveNext");
+
+            public static void ProperPost(IEnumerator<object> __instance) 
             {
-                if (!(__instance is SpawnResponseMessage))
-                    ByteRetriever.Return(bytes);
+                if (__instance == null) MelonLogger.Msg("1fail");
+                if (_self.GetValue(__instance) == null) MelonLogger.Msg("2fail");
+                if (!(_self.GetValue(__instance) is SpawnResponseMessage))
+                {
+                    ByteRetriever.Return((byte[])_bytes.GetValue(__instance));
+                }
             }
         }
         [HarmonyPatch(typeof(SpawnResponseMessage), "HandleMessage", new Type[] { typeof(byte[]), typeof(bool) })]
@@ -146,60 +147,59 @@ namespace FusionAutoDownload
             [HarmonyPrefix]
             public static bool Prefix(byte[] bytes, bool isServerHandled) // U
             {
-                if (!isServerHandled)
-                {
-                    FusionReader reader = FusionReader.Create(bytes);
-                    SpawnResponseData data = reader.ReadFusionSerializable<SpawnResponseData>();
+                if (isServerHandled)
+                    throw new ExpectedClientException();
+                
+                FusionReader reader = FusionReader.Create(bytes);
+                SpawnResponseData data = reader.ReadFusionSerializable<SpawnResponseData>();
 
-                    // Prevent double spawning.
-                    // This prefix gets called twice for some unknown reason
-                    if (s_lastSyncId == null)
+                // Prevent double spawning.
+                // This prefix gets called twice for some unknown reason
+                if (s_lastSyncId == null)
+                    s_lastSyncId = data.syncId;
+                else
+                    if (s_lastSyncId == data.syncId)
                     {
-                        s_lastSyncId = data.syncId;
+                        s_lastSyncId = null;
+                        return false;
                     }
                     else
-                    {
-                        if (s_lastSyncId == data.syncId)
-                        {
-                            s_lastSyncId = null;
-                            return false;
-                        }
-                        else
-                        {
-                            s_lastSyncId = null;
-                        }
-                    }
+                        s_lastSyncId = null;
 
-                    var palletBarcode = RepoWrapper.GetPalletBarcode(data.barcode);
 
-                    // if valid barcode
-                    if (palletBarcode.HasValue)
+                var palletBarcode = RepoWrapper.GetPalletBarcode(data.barcode);
+
+                // if valid barcode
+                if (palletBarcode.HasValue)
+                {
+                    // if in a repo
+                    if (RepoWrapper.Barcode2Mod.TryGetValue(palletBarcode.Value.Item1, out ModWrapper mod))
                     {
-                        // if in a repo
-                        if (RepoWrapper.Barcode2Mod.TryGetValue(palletBarcode.Value.Item1, out ModWrapper mod))
-                        {
-                            mod.TryDownload(() => 
-                            { 
-                                if (mod.Downloading)
-                                    new SpawnableUI(data, mod, () => { ActuallyProcess(data, bytes, reader); });
-                                else ActuallyProcess(data, bytes, reader);
-                            });
-                            return false;
-                        }
-                        else // not in a repo
+                        if (mod.Installed)
                         {
                             ActuallyProcess(data, bytes, reader);
                             return false;
                         }
+
+                        mod.TryDownload(() =>
+                        {
+                            if (mod.Downloading)
+                                new SpawnableUI(data, mod, () => ActuallyProcess(data, bytes, reader));
+                            else ActuallyProcess(data, bytes, reader);
+                        });
+                        return false;
                     }
-                    else //invalid barcode
+                    else // not in a repo
                     {
                         ActuallyProcess(data, bytes, reader);
                         return false;
                     }
                 }
-                else 
-                    throw new ExpectedClientException();
+                else //invalid barcode
+                {
+                    ActuallyProcess(data, bytes, reader);
+                    return false;
+                }
             }
             public static void ActuallyProcess(SpawnResponseData data, byte[] bytes, FusionReader reader)
             {
@@ -222,6 +222,7 @@ namespace FusionAutoDownload
                 NullableMethodExtensions.PoolManager_Spawn(spawnable, data.serializedTransform.position, data.serializedTransform.rotation.Expand(), null,
                     true, null, (Action<GameObject>)((go) => { SpawnResponseMessage.OnSpawnFinished(owner, barcode, syncId, go, path, hand); }), null);
 
+                
                 ByteRetriever.Return(bytes);
                 data.Dispose();
                 reader.Dispose();

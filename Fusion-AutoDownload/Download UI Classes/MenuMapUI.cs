@@ -117,7 +117,7 @@ namespace FusionAutoDownload.UIClasses
                 LobbyMetadataInfo info = BoneMenuCreator_CreateLobby_Patch.LatestLobbyInfo;
                 if (action != null && color == Color.white && !__instance.Name.Contains("Manual") && name == "Join Server")
                 {
-                    Msg(__instance.Name);
+                    //Msg(__instance.Name);
 
                     INetworkLobby lobby = BoneMenuCreator_CreateLobby_Patch.LatestLobby;
 

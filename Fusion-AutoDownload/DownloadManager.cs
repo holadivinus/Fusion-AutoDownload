@@ -28,11 +28,11 @@ namespace FusionAutoDownload
             if (!Directory.Exists(downloadingModsPath))
                 Directory.CreateDirectory(downloadingModsPath);
 
-            string modPath = Path.Combine(downloadingModsPath, "Pallet." + mod.Barcode + ".zip");
-            if (File.Exists(modPath))
-                File.Delete(modPath);
+            string modZipPath = Path.Combine(downloadingModsPath, "Pallet." + mod.Barcode + ".zip");
+            if (File.Exists(modZipPath))
+                File.Delete(modZipPath);
 
-            uwr.downloadHandler = new DownloadHandlerFile(modPath);
+            uwr.downloadHandler = new DownloadHandlerFile(modZipPath);
 
             //Start the download
             yield return uwr.SendWebRequest();
@@ -46,12 +46,14 @@ namespace FusionAutoDownload
             if (uwr.result == UnityWebRequest.Result.Success)
             {
                 AssetWarehouse.Instance.UnloadPallet(mod.Barcode);
-                string b = Path.Combine(MarrowSDK.RuntimeModsPath, mod.Barcode) + '\\';
-                ExtractPalletFolderFromZip(modPath, b);
+                string unZippedPath = Path.Combine(MarrowSDK.RuntimeModsPath, mod.Barcode) + '\\';
+                if (Directory.Exists(unZippedPath))
+                    Directory.Delete(unZippedPath, true);
+                ExtractPalletFolderFromZip(modZipPath, unZippedPath);
                 AutoDownloadMelon.UnityThread.Enqueue(() => 
                 { 
                     AssetWarehouse.Instance.ReloadPallet(mod.Barcode);
-                    AssetWarehouse.Instance.LoadPalletFromFolderAsync(b, true);
+                    AssetWarehouse.Instance.LoadPalletFromFolderAsync(unZippedPath, true);
                     Msg($"Download of {mod.Barcode} Complete!");
                 });
             }
@@ -80,25 +82,17 @@ namespace FusionAutoDownload
                     string zipPalletRootPath = palletJson.FullName.Substring(0, palletJson.FullName.Length - 11);
                     foreach (ZipArchiveEntry entry in archive.Entries)
                     {
-                        Msg("a");
                         if (!entry.FullName.StartsWith(zipPalletRootPath) || entry.FullName.EndsWith("/"))
                             continue;
 
-                        Msg("b");
                         string filePath = Path.Combine(destinationPath, entry.FullName.Substring(zipPalletRootPath.Length));
-                        Msg(filePath);
 
-                        Msg("c");
                         Directory.CreateDirectory(filePath.Substring(0, filePath.LastIndexOf('/')));
 
-                        Msg("d");
-                        entry.ExtractToFile(filePath);
-
-                        Msg("e");
+                        entry.ExtractToFile(filePath, true);
                     }
                 }
             }
-            Msg("Out!");
             File.Delete(zipPath);
         }
 

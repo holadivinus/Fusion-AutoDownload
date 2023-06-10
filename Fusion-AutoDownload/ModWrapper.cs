@@ -74,22 +74,14 @@ namespace FusionAutoDownload
 
                 if (int.TryParse(Version, out int l) && int.TryParse(crateVersion, out int r))
                     needsUpdate = l > r;
-                if (!needsUpdate)
+                else if (!needsUpdate)
                     needsUpdate = new Version(Version) > new Version(crateVersion);
 
                 if (needsUpdate)
                 {
                     string folderPath = Path.Combine(MarrowSDK.RuntimeModsPath, Barcode);
-                    DirectoryInfo directory = new DirectoryInfo(folderPath);
 
                     AssetWarehouse.Instance.UnloadPallet(Barcode);
-
-                    foreach (FileInfo file in directory.GetFiles())
-                        file.Delete();
-
-                    foreach (DirectoryInfo subdirectory in directory.GetDirectories())
-                        subdirectory.Delete(true);
-                    
                     Installed = false;
 
                     AutoDownloadMelon.UnityThread.Enqueue(() =>
@@ -134,7 +126,7 @@ namespace FusionAutoDownload
             Progress = uwr.downloadProgress;
             Percent = Mathf.RoundToInt(uwr.downloadProgress * 100).ToString() + '%';
             MB = $"{Mathf.RoundToInt(uwr.downloadedBytes / 1e+6f)}mb / {Mathf.RoundToInt((uwr.downloadedBytes / 1e+6f) / uwr.downloadProgress)}mb";
-            Msg($"{Barcode}: " + MB);
+            //Msg($"{Barcode}: " + MB);
         }
 
         public float Progress;
