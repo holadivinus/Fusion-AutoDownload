@@ -57,7 +57,6 @@ namespace FusionAutoDownload
             {
                 foreach (ModWrapper mod in Barcode2Mod.Values.Where(mod => mod.Installed))
                     mod.TryUpdate();
-                DownloadManager.StartDownload(Barcode2Mod["EXODUSKS.MilesFutureSuit"]);
             });
         }
         public static void AddRepo(ModRepository repo) // U

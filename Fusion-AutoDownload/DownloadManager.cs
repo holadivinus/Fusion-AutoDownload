@@ -48,7 +48,10 @@ namespace FusionAutoDownload
                 AssetWarehouse.Instance.UnloadPallet(mod.Barcode);
                 string unZippedPath = Path.Combine(MarrowSDK.RuntimeModsPath, mod.Barcode) + '\\';
                 if (Directory.Exists(unZippedPath))
+                {
+                    AssetWarehouse.Instance.UnloadPallet(mod.Barcode);
                     Directory.Delete(unZippedPath, true);
+                }
                 ExtractPalletFolderFromZip(modZipPath, unZippedPath);
                 AutoDownloadMelon.UnityThread.Enqueue(() => 
                 { 
@@ -61,7 +64,6 @@ namespace FusionAutoDownload
             {
                 Msg("Error while downloading: " + uwr.error);
             }
-            
         }
 
 

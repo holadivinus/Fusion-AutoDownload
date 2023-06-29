@@ -1,9 +1,9 @@
 ManifestFileVersion: 0
-CRC: 1067440934
+CRC: 2344964836
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: cdee5de62c2b70baf78a00d1c1182a46
+    Hash: b7491dea20d17450c834296ad8c2ed3d
   TypeTreeHash:
     serializedVersion: 2
     Hash: 28d5d7325cff9ea93d4780166419b331
@@ -135,6 +135,7 @@ SerializeReferenceClassIdentifiers:
 Assets:
 - Assets/UI/Icon.png
 - Assets/UI/gooslag.png
+- Assets/UI/Search.png
 - Assets/UI/AutoDownloadMenu.prefab
 - Assets/UI/CircRect.png
 - Assets/UI/CircleHole.png

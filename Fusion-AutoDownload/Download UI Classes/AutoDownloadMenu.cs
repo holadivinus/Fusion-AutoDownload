@@ -285,7 +285,7 @@ namespace FusionAutoDownload.Download_UI_Classes
                         if (FoundFont == null)
                             FoundFont = __instance.MainPage?.transform.FindChild("Name").GetComponent<TextMeshPro>().font;
 
-                        foreach (TextMeshProUGUI text in SpawnedMenu.GetComponentsInChildren<TextMeshProUGUI>())
+                        foreach (TextMeshProUGUI text in SpawnedMenu.GetComponentsInChildren<TextMeshProUGUI>(true))
                             text.font = FoundFont;
 
                         SpawnedMenuRefs = SpawnedMenu.transform.GetChild(1).GetComponent<EventTrigger>();
@@ -301,7 +301,7 @@ namespace FusionAutoDownload.Download_UI_Classes
                     UnityEngine.Object.Destroy(SpawnedMenu);
                     __instance.MainPage?.transform.FindChild("Name")?.gameObject.SetActive(false);
                     Category.SetName("Fusion Autodownloader");
-                }
+                } else __instance.MainPage?.transform.FindChild("Name")?.gameObject.SetActive(true);
             }
         }
 
@@ -355,6 +355,17 @@ namespace FusionAutoDownload.Download_UI_Classes
         // - 3 - mod will delete Toggle
         // - 4 - mod will update Toggle
         // - 5 - mod max file size display TextMeshProUGUI
+        // 6 - Search menu EventTrigger
+        // - 0 - ModsList RectTransform
+        // - 1 - Sort Mode TextMeshProUGUI
+        // - 2 - Search Button
+        // - 3 - ModList Up Button
+        // - 4 - ModList down Button
+        // - 5 - Keyboard Keys holder gameobject
+        // - 6 - Keyboard space button
+        // - 7 - Keyboard clear button
+        // - 8 - Keyboard backspace button
+        // - 9 - Search Bar Text TextMeshProUGUI
 
         public static void SetupMenuFunctionality()
         {
@@ -366,14 +377,25 @@ namespace FusionAutoDownload.Download_UI_Classes
 
             // Setting up Up/Down Mod Scroll
             RectTransform modList = SpawnedMenuRefs.GetPersistant<RectTransform>(1);
-            SpawnedMenuRefs.GetPersistant<Button>(2).onClick.AddListener(new Action(() => { modList.anchoredPosition -= new Vector2(0, 100); }));
-            SpawnedMenuRefs.GetPersistant<Button>(3).onClick.AddListener(new Action(() => 
+
+            SpawnedMenuRefs.GetPersistant<Button>(3).onClick.AddListener(new Action(() =>
             {
-                modList.anchoredPosition += new Vector2(0, 75);
-                // Add a mod to the list for infinite scrolling
-                ModWrapper foundMod = ModManagerMenu.FindNextModEntry();
-                if (foundMod != null)
-                    ModManagerMenu.AddModEntry(foundMod, modList);
+                ModWrapper foundMod = ModManagerMenu.FindNextModEntry(true, RepoWrapper.AllMods, true, ref ModManagerMenu.RightModNum);
+                ModManagerMenu.LeftModNum = ModManagerMenu.RightModNum - 1;
+                for (int i = 0; i < 6; i++)
+                    ModManagerMenu.FindNextModEntry(false, RepoWrapper.AllMods, false, ref ModManagerMenu.LeftModNum);
+
+                ModManagerMenu.AddModEntry(foundMod, modList, true);
+            }));
+
+            SpawnedMenuRefs.GetPersistant<Button>(2).onClick.AddListener(new Action(() =>
+            {
+                ModWrapper foundMod = ModManagerMenu.FindNextModEntry(false, RepoWrapper.AllMods, true, ref ModManagerMenu.LeftModNum);
+                ModManagerMenu.RightModNum = ModManagerMenu.LeftModNum + 1;
+                for (int i = 0; i < 6; i++)
+                    ModManagerMenu.FindNextModEntry(true, RepoWrapper.AllMods, false, ref ModManagerMenu.RightModNum);
+
+                ModManagerMenu.AddModEntry(foundMod, modList, false);
             }));
 
             // Setup Mod Filter list
@@ -382,9 +404,10 @@ namespace FusionAutoDownload.Download_UI_Classes
                                                .ToArray()
                                                .Select(pc => pc.target.Cast<Toggle>())
                                                .ToArray();
+
             foreach (Toggle filterTog in ModFiltersToggles)
-                filterTog.onValueChanged.AddListener(new Action<bool>(state => { ModManagerMenu.RefreshMods(modList); }));
-            ModManagerMenu.RefreshMods(modList);
+                filterTog.onValueChanged.AddListener(new Action<bool>(state => { ModManagerMenu.RefreshMods(modList, RepoWrapper.AllMods, 6, true, ref ModManagerMenu.RightModNum); }));
+            ModManagerMenu.RefreshMods(modList, RepoWrapper.AllMods, 6, true, ref ModManagerMenu.RightModNum);
 
             // Setting up Safetey Menu
             EventTrigger safeteyMenuRefs = SpawnedMenuRefs.GetPersistant<EventTrigger>(5);
@@ -428,23 +451,167 @@ namespace FusionAutoDownload.Download_UI_Classes
             {
                 AutoDownloadMelon.WillUpdateDefault = state;
             }));
+
+
+            // Keyboard / Mod Search setup
+            EventTrigger searchMenuRefList = SpawnedMenuRefs.GetPersistant<EventTrigger>(6);
+
+            RectTransform searchList = searchMenuRefList.GetPersistant<RectTransform>(0);
+            searchList.DestroyAllChildren();
+            
+            TextMeshProUGUI sortMode = searchMenuRefList.GetPersistant<TextMeshProUGUI>(1);
+            TextMeshProUGUI searchText = searchMenuRefList.GetPersistant<TextMeshProUGUI>(9);
+
+            Button modListUpBT = searchMenuRefList.GetPersistant<Button>(3);
+            Button modListDownBT = searchMenuRefList.GetPersistant<Button>(4);
+
+            // Search button pressed
+            searchMenuRefList.GetPersistant<Button>(2).onClick.AddListener(new Action(() => 
+            {
+                searchList.DestroyAllChildren();
+
+                int leftModNum = 0;
+                int rightModNum = 0;
+                switch (sortMode.text.Substring(9))
+                {
+                    case "Search Bar":
+                        ModWrapper[] searchedMods = FuzzySearches.FuzzySearchMods(RepoWrapper.AllMods, searchText.text).ToArray();
+
+                        ModManagerMenu.RefreshMods(searchList, searchedMods, 8, false, ref rightModNum);
+
+                        modListDownBT.onClick = new Button.ButtonClickedEvent();
+                        modListDownBT.onClick.AddListener(new Action(() => 
+                        {
+                            SpawnedAudio.PlayOneShot(UIAssetMenuButtonSFX);
+                            ModWrapper foundMod = ModManagerMenu.FindNextModEntry(true, searchedMods, false, ref rightModNum);
+                            leftModNum = rightModNum - 1;
+                            for (int i = 0; i < 8; i++)
+                                ModManagerMenu.FindNextModEntry(false, searchedMods, false, ref leftModNum);
+
+                            ModManagerMenu.AddModEntry(foundMod, searchList, true);
+                        }));
+
+                        modListUpBT.onClick = new Button.ButtonClickedEvent();
+                        modListUpBT.onClick.AddListener(new Action(() =>
+                        {
+                            SpawnedAudio.PlayOneShot(UIAssetMenuButtonSFX);
+                            ModWrapper foundMod = ModManagerMenu.FindNextModEntry(false, searchedMods, false, ref leftModNum);
+                            rightModNum = leftModNum + 1;
+                            for (int i = 0; i < 8; i++)
+                                ModManagerMenu.FindNextModEntry(true, searchedMods, false, ref rightModNum);
+
+                            ModManagerMenu.AddModEntry(foundMod, searchList, false);
+                        }));
+                        
+                        break;
+                    case "Downloads":
+                        List<(ModWrapper, int)> searchedMods2 = RepoWrapper.AllMods.Where(mod => mod.ModListing.Title.Contains("\n  <mspace=-0.2>\u25ac\ua71c</mspace>    "))
+                                                                        .Select(mod =>
+                                                                        {
+                                                                            (ModWrapper, int)? o = null;
+
+                                                                            string[] split = mod.ModListing.Title.Split(new string[] { "\n  <mspace=-0.2>\u25ac\ua71c</mspace>    " }, StringSplitOptions.RemoveEmptyEntries).ToArray();
+                                                                            if (int.TryParse(split[split.Length - 1], out int downloads))
+                                                                                o = (mod, downloads);
+                                                                            return o;
+                                                                        }).Where(tup => tup.HasValue)
+                                                                        .Select(tup => tup.Value)
+                                                                        .ToList();
+
+                        searchedMods2.Sort((a, b) => b.Item2.CompareTo(a.Item2));
+
+                        ModWrapper[] searchedMods3 = searchedMods2.Select((tup) => tup.Item1).ToArray();
+
+                        ModManagerMenu.RefreshMods(searchList, searchedMods3, 8, false, ref rightModNum);
+
+                        modListDownBT.onClick = new Button.ButtonClickedEvent();
+                        modListDownBT.onClick.AddListener(new Action(() =>
+                        {
+                            SpawnedAudio.PlayOneShot(UIAssetMenuButtonSFX);
+                            ModWrapper foundMod = ModManagerMenu.FindNextModEntry(true, searchedMods3, false, ref rightModNum);
+                            leftModNum = rightModNum - 1;
+                            for (int i = 0; i < 8; i++)
+                                ModManagerMenu.FindNextModEntry(false, searchedMods3, false, ref leftModNum);
+
+                            ModManagerMenu.AddModEntry(foundMod, searchList, true);
+                        }));
+
+                        modListUpBT.onClick = new Button.ButtonClickedEvent();
+                        modListUpBT.onClick.AddListener(new Action(() =>
+                        {
+                            SpawnedAudio.PlayOneShot(UIAssetMenuButtonSFX);
+                            ModWrapper foundMod = ModManagerMenu.FindNextModEntry(false, searchedMods3, false, ref leftModNum);
+                            rightModNum = leftModNum + 1;
+                            for (int i = 0; i < 8; i++)
+                                ModManagerMenu.FindNextModEntry(true, searchedMods3, false, ref rightModNum);
+
+                            ModManagerMenu.AddModEntry(foundMod, searchList, false);
+                        }));
+                        break;
+                }
+
+            }));
+
+            // Keyboard setup
+            bool firstPress = true;
+            Transform keyHolder = searchMenuRefList.GetPersistant<GameObject>(5).transform;
+            for (int i = 0; i < keyHolder.childCount; i++)
+            {
+                Transform curKeyTrans = keyHolder.GetChild(i);
+                
+                if (i != 19)
+                curKeyTrans.GetComponent<Button>().onClick.AddListener(new Action(() => 
+                {
+                    if (firstPress)
+                        searchText.text = "";
+                    searchText.text += curKeyTrans.gameObject.name;
+                    firstPress = false;
+                }));
+            }
+
+            searchMenuRefList.GetPersistant<Button>(6).onClick.AddListener(new Action(() => 
+            {
+                if (firstPress)
+                    searchText.text = "";
+                searchText.text += ' ';
+                firstPress = false;
+            }));
+            searchMenuRefList.GetPersistant<Button>(7).onClick.AddListener(new Action(() => { searchText.text = "..."; firstPress = true; }));
+            searchMenuRefList.GetPersistant<Button>(8).onClick.AddListener(new Action(() => 
+            { 
+                searchText.text = searchText.text.Substring(0, searchText.text.Length-1);
+                if (searchText.text == "")
+                {
+                    searchText.text = "...";
+                    firstPress = true;
+                }
+            }));
         }
+        // 6 - Search menu EventTrigger
+        // - 0 - ModsList RectTransform
+        // - 1 - Sort Mode TextMeshProUGUI
+        // - 2 - Search Button
+        // - 3 - ModList Up Button
+        // - 4 - ModList down Button
+        // - 5 - Keyboard Keys holder gameobject
+        // - 6 - Keyboard space button
+        // - 7 - Keyboard clear button
+        // - 8 - Keyboard backspace button
+        // - 9 - Search Bar Text TextMeshProUGUI
 
         public static class ModManagerMenu
         {
-            public static void RefreshMods(RectTransform modList)
+            public static void RefreshMods(RectTransform modList, ModWrapper[] mods, int generateCount, bool useFilters, ref int rightNum)
             {
                 modList.DestroyAllChildren();
-                
-                s_lastFoundModNum = NoFiltersEnabled ? UnityEngine.Random.RandomRangeInt(0, RepoWrapper.AllMods.Length) : 0;
-                for (int i = 0; i < 8; i++)
+
+                LeftModNum = RightModNum = NoFiltersEnabled ? UnityEngine.Random.RandomRangeInt(0, RepoWrapper.AllMods.Length-generateCount) : 0;
+                LeftModNum--;
+                for (int i = 0; i < generateCount; i++)
                 {
-                    ModWrapper foundMod = FindNextModEntry();
-                    if (foundMod != null)
-                    {
-                        AddModEntry(foundMod, modList);
-                    }
-                    else break;
+                    ModWrapper foundMod = FindNextModEntry(true, mods, useFilters, ref rightNum);
+
+                    AddModEntry(foundMod, modList, null);
                 }
 
                 modList.anchoredPosition = new Vector2(0, 0);
@@ -469,23 +636,42 @@ namespace FusionAutoDownload.Download_UI_Classes
                 return valid;
             }
 
-            private static int s_lastFoundModNum;
-            public static ModWrapper FindNextModEntry()
+            public static int LeftModNum;
+            public static int RightModNum;
+            public static ModWrapper FindNextModEntry(bool dir, ModWrapper[] mods, bool useFilters, ref int storedIndex)
             {
-                for (int i = s_lastFoundModNum; i < RepoWrapper.AllMods.Length; i++)
+                for (int i = storedIndex; i < mods.Length && i > -1; i += dir ? 1 : -1)
                 {
-                    ModWrapper mod = RepoWrapper.AllMods[i];
-                    if (CheckFilters(mod))
+                    ModWrapper mod = mods[i];
+                    if (!useFilters || CheckFilters(mod))
                     {
-                        s_lastFoundModNum = i+1;
+                        if (dir)
+                            storedIndex = i+1;
+                        else
+                            storedIndex = i-1;
                         return mod;
                     }
                 }
                 return null;
             }
-            public static void AddModEntry(ModWrapper mod, RectTransform parent)
+            public static void AddModEntry(ModWrapper mod, RectTransform parent, bool? bottem)
             {
+                if (mod == null)
+                    return;
                 Transform newEntry = UnityEngine.Object.Instantiate(UIModEntry, parent).transform;
+                if (bottem.HasValue)
+                {
+                    if (!(bool)bottem)
+                    {
+                        newEntry.SetAsFirstSibling();
+                        UnityEngine.Object.Destroy(parent.GetChild(parent.childCount - 1).gameObject);
+                    }
+                    else
+                    {
+                        newEntry.SetAsLastSibling();
+                        UnityEngine.Object.Destroy(parent.GetChild(0).gameObject);
+                    }
+                }
                 newEntry.GetComponent<Button>().onClick.AddListener(new Action(() =>
                 {
                     SpawnedAudio.PlayOneShot(UIAssetMenuButtonSFX);
@@ -555,6 +741,7 @@ namespace FusionAutoDownload.Download_UI_Classes
                 EventTrigger selectedRefs = SpawnedMenuRefs.GetPersistant<EventTrigger>(4);
                 selectedRefs.GetPersistant<TextMeshProUGUI>(0).text = mod.ModListing.Title;
                 selectedRefs.GetPersistant<TextMeshProUGUI>(1).text = $"v({mod.ModListing.Version})";
+                selectedRefs.GetPersistant<TextMeshProUGUI>(2).text = mod.ModListing.Author;
                 selectedRefs.GetPersistant<TextMeshProUGUI>(2).text = mod.ModListing.Author;
                 selectedRefs.GetPersistant<TextMeshProUGUI>(3).text = mod.ModListing.Description;
 
@@ -640,5 +827,72 @@ namespace FusionAutoDownload.Download_UI_Classes
             // -15 - Thumbnail Image
         }
         public static void Msg(object msg) => AutoDownloadMelon.Msg(msg);
+    }
+
+
+    public static class FuzzySearches
+    {
+        private static double CalculateDiceCoefficient(string source, string target)
+        {
+            var sourceBigrams = GetCharacterBigrams(source);
+            var targetBigrams = GetCharacterBigrams(target);
+
+            var intersectionCount = sourceBigrams.Intersect(targetBigrams).Count();
+            var sourceCount = sourceBigrams.Count();
+            var targetCount = targetBigrams.Count();
+
+            return (2.0 * intersectionCount) / (sourceCount + targetCount);
+        }
+
+        private static IEnumerable<string> GetCharacterBigrams(string input)
+        {
+            if (string.IsNullOrEmpty(input) || input.Length < 2)
+                return Enumerable.Empty<string>();
+
+            return Enumerable.Range(0, input.Length - 1)
+                .Select(i => input.Substring(i, 2));
+        }
+
+        public static List<ModWrapper> FuzzySearchMods(ModWrapper[] sourceList, string keyword)
+        {
+            var rankedList = new List<(ModWrapper, double)>();
+
+            foreach (ModWrapper source in sourceList)
+            {
+                double similarity = CalculateDiceCoefficient(source.ModListing.Title.ToLower(), keyword.ToLower());
+                rankedList.Add((source, similarity));
+            }
+
+            rankedList.Sort((a, b) => b.Item2.CompareTo(a.Item2));
+
+            var orderedList = new List<ModWrapper>();
+            foreach ((ModWrapper source, double similarity) in rankedList)
+            {
+                orderedList.Add(source);
+            }
+
+            return orderedList;
+        }
+
+        /*public static List<ModWrapper> FuzzySearchMods(ModWrapper[] sourceList, string keyword)
+        {
+            List<(ModWrapper, int)> rankedList = new List<(ModWrapper, int)>();
+
+            foreach (ModWrapper source in sourceList)
+            {
+                int distance = CalculateLevenshteinDistance(source.ModListing.Title, keyword);
+                rankedList.Add((source, distance));
+            }
+
+            rankedList.Sort((a, b) => a.Item2.CompareTo(b.Item2));
+
+            var orderedList = new List<ModWrapper>();
+            foreach ((ModWrapper source, int distance) in rankedList)
+            {
+                orderedList.Add(source);
+            }
+
+            return orderedList;
+        }*/
     }
 }

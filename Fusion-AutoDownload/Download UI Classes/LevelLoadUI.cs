@@ -49,6 +49,7 @@ namespace FusionAutoDownload.Download_UI_Classes
 
         protected override void OnMyCrateAdded()
         {
+
             if (CurrentLoading == this)
             {
                 SceneLoadPatch.IgnorePatches = true;

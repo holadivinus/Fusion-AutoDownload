@@ -15,6 +15,7 @@ using SLZ.Marrow.Forklift.Model;
 using System.Net.Http;
 using System.Security.Policy;
 using System.Threading;
+using LabFusion.Utilities;
 
 namespace FusionAutoDownload
 {
@@ -92,6 +93,21 @@ namespace FusionAutoDownload
             AssetWarehouse.OnReady(new Action(() => AssetWarehouse.Instance.OnCrateAdded += (Action<string>)RepoWrapper.OnCrateComplete)); // < !U
 
             AutoDownloadMenu.Setup();
+
+            MultiplayerHooking.OnDisconnect += () =>
+            {
+                foreach (ModWrapper mod in RepoWrapper.AllMods)
+                    if (mod.Installed && !mod.Keeping)
+                    {
+                        try
+                        {
+                            AssetWarehouse.Instance.UnloadCrate(mod.Barcode);
+                            Directory.Delete(Path.Combine(MarrowSDK.RuntimeModsPath, mod.Barcode), true);
+                        }
+                        catch
+                        { }
+                    }
+            };
         }
         public static void Msg(object msg)
         {
@@ -115,11 +131,6 @@ namespace FusionAutoDownload
 
             foreach (ModWrapper mod in RepoWrapper.AllMods)
             {
-                if (mod.Installed && !mod.Keeping)
-                {
-                    Directory.Delete(Path.Combine(MarrowSDK.RuntimeModsPath, mod.Barcode), true);
-                }
-
                 if (mod.NeedsSave) 
                 {
                     ModWrapper.ModSettings settings;

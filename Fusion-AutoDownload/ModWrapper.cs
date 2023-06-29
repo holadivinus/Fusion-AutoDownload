@@ -25,7 +25,7 @@ namespace FusionAutoDownload
             ModTarget = modTarget;
             DownloadableModTarget = ModTarget.Cast<DownloadableModTarget>();
 
-            Keeping = Installed = Directory.Exists(Path.Combine(MarrowSDK.RuntimeModsPath, Barcode));
+            Keeping = Installed = File.Exists(Path.Combine(MarrowSDK.RuntimeModsPath, Barcode, "pallet.json"));
 
             if (AutoDownloadMelon.ModSettings.TryGetValue(Barcode, out ModSettings settings))
             {
@@ -72,16 +72,17 @@ namespace FusionAutoDownload
 
                 bool needsUpdate = false;
 
-                if (int.TryParse(Version, out int l) && int.TryParse(crateVersion, out int r))
+                if (int.TryParse(Version, out int l) && int.TryParse(crateVersion, out int r) && !crateVersion.Contains('.') && !Version.Contains('.'))
                     needsUpdate = l > r;
-                else if (!needsUpdate)
+                else if (!needsUpdate && Version != crateVersion)
+                {
+                    Msg($"Comparing for autoupdate: mod: {Barcode}, remote: {Version}, local: {crateVersion}");
                     needsUpdate = new Version(Version) > new Version(crateVersion);
+                }
+                
 
                 if (needsUpdate)
                 {
-                    string folderPath = Path.Combine(MarrowSDK.RuntimeModsPath, Barcode);
-
-                    AssetWarehouse.Instance.UnloadPallet(Barcode);
                     Installed = false;
 
                     AutoDownloadMelon.UnityThread.Enqueue(() =>
@@ -106,9 +107,13 @@ namespace FusionAutoDownload
                     Downloading = true;
 
                     Msg("Downloading mod: " + Barcode);
-                    RepoWrapper.DownloadingMods.Add(Barcode, this);
-                    DownloadManager.StartDownload(this);
 
+                    if (!RepoWrapper.DownloadingMods.ContainsKey(Barcode))
+                    {
+                        RepoWrapper.DownloadingMods.Add(Barcode, this);
+
+                        DownloadManager.StartDownload(this);
+                    }
                     onTried?.Invoke();
                 };
                 if (AutoDownloadMelon.ModSizeLimit != -1)
