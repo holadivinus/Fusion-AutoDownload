@@ -83,7 +83,7 @@ namespace FusionAutoDownload
                 if (palletCrate.HasValue && RepoWrapper.Barcode2Mod.TryGetValue(palletCrate.Value.Item1, out ModWrapper mod))
                 {
                     _mod = mod;
-
+                    _texts[0].text = mod.Barcode;
                     if (!success)
                     {
                         mod.TryDownload(() => 

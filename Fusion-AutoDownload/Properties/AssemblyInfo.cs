@@ -5,8 +5,10 @@ using MelonLoader;
 using System;
 
 [assembly: MelonColor(ConsoleColor.White)]
-[assembly: MelonInfo(typeof(AutoDownloadMelon), "Fusion Autodownloader", "0.0.7", "Holadivinus#9244")]
+[assembly: MelonInfo(typeof(AutoDownloadMelon), "Fusion Autodownloader", "0.0.8", "Holadivinus#holadivinus")]
 [assembly: MelonGame("Stress Level Zero", "BONELAB")]
+
+[assembly: MelonPriority(-9000)]
 
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information

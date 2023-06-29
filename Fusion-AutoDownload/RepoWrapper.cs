@@ -25,6 +25,7 @@ using static Il2CppSystem.Globalization.CultureInfo;
 using Il2Cpp = Il2CppSystem.Collections.Generic;
 using Newtonsoft.Json.Linq;
 using Il2CppSystem.Security.Util;
+using System.IO;
 
 namespace FusionAutoDownload
 {
@@ -45,9 +46,13 @@ namespace FusionAutoDownload
         { 
             Il2Cpp.List<ModRepository> fetchedRepos = await new ModDownloadManager().FetchRepositoriesAsync("Mods/");
 
+            IEnumerable<string> blacklistedBarcodes = File.ReadAllText(AutoDownloadMelon.BlacklistPath).Split('\n').Where(line => !line.StartsWith("#"));
+            IEnumerable<string> updatingBarcodes = File.ReadAllText(AutoDownloadMelon.UpdatePath).Split('\n').Where(line => !line.StartsWith("#"));
+
+
             foreach (ModRepository modRepo in fetchedRepos)
             {
-                AddRepo(modRepo);
+                AddRepo(modRepo, blacklistedBarcodes, updatingBarcodes);
             }
             AllMods = Barcode2Mod.Values.ToArray();
             Msg(Barcode2Mod.Count.ToString() + " Downloadable Mods!");
@@ -59,18 +64,18 @@ namespace FusionAutoDownload
                     mod.TryUpdate();
             });
         }
-        public static void AddRepo(ModRepository repo) // U
+        public static void AddRepo(ModRepository repo, IEnumerable<string> blacklisted, IEnumerable<string> updating) // U
         {
             foreach (ModListing mod in repo.Mods)
             {
                 if (mod.Targets.ContainsKey(Platform))
                 {
                     if (mod.Targets[Platform].TryCast<DownloadableModTarget>() != null)
-                        AddMod(mod, mod.Targets[Platform]);
+                        AddMod(mod, mod.Targets[Platform], blacklisted, updating);
                 }
             }
         }
-        public static void AddMod(ModListing mod, ModTarget modTarget) // U
+        public static void AddMod(ModListing mod, ModTarget modTarget, IEnumerable<string> blacklisted, IEnumerable<string> updating) // U
         {
             ModWrapper newWrapper = new ModWrapper(mod, modTarget);
 
@@ -100,6 +105,9 @@ namespace FusionAutoDownload
             }
 
             // If we're here, the mod's been added to Barcode2Mod & Url2Mod.
+
+            newWrapper.Blocked = blacklisted.Contains(newWrapper.Barcode);
+            newWrapper.AutoUpdate = updating.Contains(newWrapper.Barcode);
         }
         #endregion
 

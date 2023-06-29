@@ -57,6 +57,8 @@ namespace FusionAutoDownload
                 { 
                     AssetWarehouse.Instance.ReloadPallet(mod.Barcode);
                     AssetWarehouse.Instance.LoadPalletFromFolderAsync(unZippedPath, true);
+                    mod.AutoUpdate = AutoDownloadMelon.WillUpdateDefault;
+                    mod.Keeping = !AutoDownloadMelon.WillDeleteDefault;
                     Msg($"Download of {mod.Barcode} Complete!");
                 });
             }

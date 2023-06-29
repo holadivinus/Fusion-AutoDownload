@@ -16,6 +16,9 @@ using System.Net.Http;
 using System.Security.Policy;
 using System.Threading;
 using LabFusion.Utilities;
+using SLZ.Marrow.SceneStreaming;
+using TMPro;
+using UnityEngine;
 
 namespace FusionAutoDownload
 {
@@ -24,9 +27,6 @@ namespace FusionAutoDownload
         #region Saved Preferences
         private static MelonPreferences_Category s_preferences = MelonPreferences.CreateCategory("Fusion-Autodownloader");
 
-        public class ModsSettings : Dictionary<string, ModWrapper.ModSettings> { }
-        private static MelonPreferences_Entry<string[]> s_modsSettings = s_preferences.CreateEntry("ModsSettings", new string[] { });
-        public static ModsSettings ModSettings;
 
         private static MelonPreferences_Entry<int> s_modSizeLimit = s_preferences.CreateEntry("ModSizeLimit", -1);
         public static int ModSizeLimit { get => s_modSizeLimit.Value; set => s_modSizeLimit.Value = value; }
@@ -36,6 +36,9 @@ namespace FusionAutoDownload
 
         private static MelonPreferences_Entry<bool> s_willUpdateDefault = s_preferences.CreateEntry("WillUpdateDefault", true);
         public static bool WillUpdateDefault { get => s_willUpdateDefault.Value; set => s_willUpdateDefault.Value = value; }
+
+        public static string BlacklistPath;
+        public static string UpdatePath;
         #endregion 
 
         public override void OnEarlyInitializeMelon()
@@ -56,34 +59,23 @@ namespace FusionAutoDownload
                 }
             }
 
-            // Parse saved ModSettings, cant use any normal serialization or deserialization for garbage reasons
-            ModSettings = new ModsSettings();
-            foreach (string setting in s_modsSettings.Value)
-            {
-                string[] sets = setting.Split(',');
-                ModWrapper.ModSettings curSettings = new ModWrapper.ModSettings();
-                for (int i = 0; i < sets.Length; i++)
-                {
-                    switch (i)
-                    {
-                        case 1:
-                            if (bool.TryParse(sets[i], out bool blocked))
-                                curSettings.Blocked = blocked;
-                            break;
-                        case 2:
-                            if (bool.TryParse(sets[i], out bool updSave))
-                                curSettings.AutoUpdate = updSave;
-                            else curSettings.AutoUpdate = WillDeleteDefault;
-                            break;
-                    }
-                }
-                ModSettings.Add(sets[0], curSettings);
-            }
+            // Add Blacklist file
+            string userdataPath = Path.Combine(Directory.GetParent(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)).FullName, "UserData");
+            BlacklistPath = Path.Combine(userdataPath, "AutoDownload-BLACKLIST.txt");
+            UpdatePath = Path.Combine(userdataPath, "AutoDownload-UPDATE.txt");
+
+            if (!File.Exists(BlacklistPath))
+                using (StreamWriter writer = File.CreateText(BlacklistPath))
+                    writer.Write("# Blacklisted Barcodes go here.");
+
+            if (!File.Exists(UpdatePath))
+                using (StreamWriter writer = File.CreateText(UpdatePath))
+                    writer.Write("# Updating Barcodes go here.");
         }
 
         public override void OnLateInitializeMelon()
         {
-            new HarmonyLib.Harmony($"Holadivinus.{nameof(AutoDownloadMelon)}.(0.0.7)")
+            new HarmonyLib.Harmony($"Holadivinus.{nameof(AutoDownloadMelon)}.(0.0.8)")
             .PatchAll();
 
             RepoWrapper.FetchRepos();
@@ -93,21 +85,26 @@ namespace FusionAutoDownload
             AssetWarehouse.OnReady(new Action(() => AssetWarehouse.Instance.OnCrateAdded += (Action<string>)RepoWrapper.OnCrateComplete)); // < !U
 
             AutoDownloadMenu.Setup();
-
-            MultiplayerHooking.OnDisconnect += () =>
+        }
+        [HarmonyLib.HarmonyPatch(typeof(SceneManager), "LoadSceneAsync", typeof(string), typeof(LoadSceneParameters))]
+        public class AsyncPatch
+        {
+            private static void Postfix(ref AsyncOperation __result)
             {
-                foreach (ModWrapper mod in RepoWrapper.AllMods)
-                    if (mod.Installed && !mod.Keeping)
-                    {
-                        try
+                if (GameObject.Find("LoadingScene/") != null)
+                    foreach (ModWrapper mod in RepoWrapper.AllMods)
+                        if (mod.Installed && !mod.Keeping)
                         {
-                            AssetWarehouse.Instance.UnloadCrate(mod.Barcode);
-                            Directory.Delete(Path.Combine(MarrowSDK.RuntimeModsPath, mod.Barcode), true);
+                            try
+                            {
+                                AssetWarehouse.Instance.UnloadCrate(mod.Barcode);
+                                Directory.Delete(Path.Combine(MarrowSDK.RuntimeModsPath, mod.Barcode), true);
+                                mod.Installed = false;
+                            }
+                            catch
+                            { }
                         }
-                        catch
-                        { }
-                    }
-            };
+            }
         }
         public static void Msg(object msg)
         {
@@ -127,24 +124,21 @@ namespace FusionAutoDownload
 
         public override void OnApplicationQuit()
         {
-            List<string> modSettingsSave = new List<string>();
-
-            foreach (ModWrapper mod in RepoWrapper.AllMods)
+            using (StreamWriter writer = File.CreateText(BlacklistPath))
             {
-                if (mod.NeedsSave) 
-                {
-                    ModWrapper.ModSettings settings;
-
-                    if (!ModSettings.TryGetValue(mod.Barcode, out settings))
-                        ModSettings.Add(mod.Barcode, settings = new ModWrapper.ModSettings());
-
-                    settings.Blocked = mod.Blocked;
-                    settings.AutoUpdate = mod.AutoUpdate;
-
-                    modSettingsSave.Add($"{mod.Barcode},{mod.Blocked},{mod.AutoUpdate}");
-                }
+                writer.WriteLine("# Blacklisted Barcodes go here.");
+                foreach (ModWrapper mod in RepoWrapper.AllMods)
+                    if (mod.Blocked)
+                        writer.WriteLine(mod.Barcode);
             }
-            s_modsSettings.Value = modSettingsSave.ToArray();
+
+            using (StreamWriter writer = File.CreateText(UpdatePath))
+            {
+                writer.WriteLine("# Auto-Updating Barcodes go here.");
+                foreach (ModWrapper mod in RepoWrapper.AllMods)
+                    if (mod.AutoUpdate)
+                        writer.WriteLine(mod.Barcode);
+            }
         }
     }
 }

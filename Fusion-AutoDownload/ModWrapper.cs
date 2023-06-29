@@ -26,13 +26,6 @@ namespace FusionAutoDownload
             DownloadableModTarget = ModTarget.Cast<DownloadableModTarget>();
 
             Keeping = Installed = File.Exists(Path.Combine(MarrowSDK.RuntimeModsPath, Barcode, "pallet.json"));
-
-            if (AutoDownloadMelon.ModSettings.TryGetValue(Barcode, out ModSettings settings))
-            {
-                Blocked = settings.Blocked;
-                AutoUpdate = settings.AutoUpdate;
-            }
-            else AutoUpdate = AutoDownloadMelon.WillUpdateDefault;
         }
 
         public ModListing ModListing;
@@ -48,15 +41,8 @@ namespace FusionAutoDownload
         public bool Downloading;
         public bool Keeping;
 
-        public bool NeedsSave { get => Blocked || ((AutoUpdate != AutoDownloadMelon.WillUpdateDefault) && Installed) ; }
         public bool Blocked;
         public bool AutoUpdate;
-
-        public struct ModSettings
-        {
-            public bool Blocked;
-            public bool AutoUpdate;
-        }
 
         public void TryUpdate()
         {

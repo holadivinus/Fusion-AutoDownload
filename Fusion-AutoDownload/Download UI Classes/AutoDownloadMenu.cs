@@ -2,12 +2,9 @@
 using BoneLib.BoneMenu.Elements;
 using BoneLib.BoneMenu.UI;
 using HarmonyLib;
-using System.Reflection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -15,18 +12,8 @@ using UnityEngine.EventSystems;
 using UnityEngine.Events;
 using Il2CppColGen = Il2CppSystem.Collections.Generic;
 using UnhollowerBaseLib;
-using Jevil;
-using System.Runtime.CompilerServices;
-using static SLZ.Bonelab.TransformDeepChildExtension;
-using Il2CppCol = Il2CppSystem.Collections;
 using System.Collections;
 using UnityEngine.Networking;
-using MelonLoader;
-using SLZ.Marrow.Warehouse;
-using Newtonsoft.Json;
-using Cysharp.Threading.Tasks;
-using static SLZ.UI.Feedback_Audio;
-using SLZ.Marrow.Forklift;
 
 namespace FusionAutoDownload.Download_UI_Classes
 {
@@ -355,6 +342,7 @@ namespace FusionAutoDownload.Download_UI_Classes
         // - 3 - mod will delete Toggle
         // - 4 - mod will update Toggle
         // - 5 - mod max file size display TextMeshProUGUI
+        // - 6 - discord Button
         // 6 - Search menu EventTrigger
         // - 0 - ModsList RectTransform
         // - 1 - Sort Mode TextMeshProUGUI
@@ -437,6 +425,7 @@ namespace FusionAutoDownload.Download_UI_Classes
             changeMaxModSize.Invoke(0);
             safeteyMenuRefs.GetPersistant<Button>(0).onClick.AddListener(new Action(() => { changeMaxModSize.Invoke(-0.025f); }));
             safeteyMenuRefs.GetPersistant<Button>(1).onClick.AddListener(new Action(() => { changeMaxModSize.Invoke(0.025f); }));
+            safeteyMenuRefs.GetPersistant<Button>(6).onClick.AddListener(new Action(() => Application.OpenURL(@"https://discord.gg/Kaqvh4Jw")));
 
             // - Default autodownloaded mod's states settings
             Toggle willDelete = safeteyMenuRefs.GetPersistant<Toggle>(3);
@@ -742,8 +731,8 @@ namespace FusionAutoDownload.Download_UI_Classes
                 selectedRefs.GetPersistant<TextMeshProUGUI>(0).text = mod.ModListing.Title;
                 selectedRefs.GetPersistant<TextMeshProUGUI>(1).text = $"v({mod.ModListing.Version})";
                 selectedRefs.GetPersistant<TextMeshProUGUI>(2).text = mod.ModListing.Author;
-                selectedRefs.GetPersistant<TextMeshProUGUI>(2).text = mod.ModListing.Author;
                 selectedRefs.GetPersistant<TextMeshProUGUI>(3).text = mod.ModListing.Description;
+                selectedRefs.GetPersistant<TextMeshProUGUI>(14).text = mod.Barcode;
 
                 RepoWrapper.GetURLFileSize(mod.Url, size =>
                 {
