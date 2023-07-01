@@ -26,6 +26,12 @@ using Il2Cpp = Il2CppSystem.Collections.Generic;
 using Newtonsoft.Json.Linq;
 using Il2CppSystem.Security.Util;
 using System.IO;
+using SLZ.Marrow.SceneStreaming;
+using SLZ.Marrow;
+using LabFusion.Utilities;
+using Steamworks;
+using LabFusion;
+using LabFusion.Network;
 
 namespace FusionAutoDownload
 {
@@ -46,9 +52,15 @@ namespace FusionAutoDownload
         { 
             Il2Cpp.List<ModRepository> fetchedRepos = await new ModDownloadManager().FetchRepositoriesAsync("Mods/");
 
-            IEnumerable<string> blacklistedBarcodes = File.ReadAllText(AutoDownloadMelon.BlacklistPath).Split('\n').Where(line => !line.StartsWith("#"));
-            IEnumerable<string> updatingBarcodes = File.ReadAllText(AutoDownloadMelon.UpdatePath).Split('\n').Where(line => !line.StartsWith("#"));
+            IEnumerable<string> blacklistedBarcodes = File.ReadAllText(AutoDownloadMelon.BlacklistPath)
+                                                          .Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries)
+                                                          .Where(line => !line.StartsWith("#"));
 
+            IEnumerable<string> updatingBarcodes = File.ReadAllText(AutoDownloadMelon.UpdatePath)
+                                                          .Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries)
+                                                          .Where(line => !line.StartsWith("#"));
+
+            Msg(updatingBarcodes.Count());
 
             foreach (ModRepository modRepo in fetchedRepos)
             {
@@ -125,7 +137,7 @@ namespace FusionAutoDownload
             else return null;
         }
 
-        public static void OnCrateComplete(string crateBarcode) // U
+        public static void OnCrateComplete(string crateBarcode) // !U
         {
             AutoDownloadMelon.UnityThread.Enqueue(() =>
             {
@@ -213,6 +225,38 @@ namespace FusionAutoDownload
                 }
                 catch (Exception) { }
             });
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(SceneStreamer), nameof(SceneStreamer.Load), typeof(LevelCrateReference), typeof(LevelCrateReference))]
+        public class AsyncPatch
+        {
+            private static bool s_clearMods = false;
+            private static void Postfix(LevelCrateReference level, LevelCrateReference loadLevel)
+            {
+                s_clearMods = !s_clearMods;
+                if (s_clearMods)
+                    return;
+
+                if (NetworkInfo.IsClient || NetworkInfo.IsServer)
+                    return;
+
+                // if not modded
+                bool loadingModded = level.Barcode.ToString().Contains(".Level.");
+                foreach (ModWrapper mod in RepoWrapper.AllMods)
+                {
+                    if (mod.Installed && !mod.Keeping && !level.Barcode.ToString().StartsWith(mod.Barcode))
+                    {
+                        try
+                        {
+                            AssetWarehouse.Instance.UnloadCrate(mod.Barcode);
+                            Directory.Delete(Path.Combine(MarrowSDK.RuntimeModsPath, mod.Barcode), true);
+                            mod.Installed = false;
+                        }
+                        catch
+                        { }
+                    }
+                }
+            }
         }
 
         public static void Msg(object msg) => AutoDownloadMelon.Msg(msg);

@@ -37,6 +37,9 @@ namespace FusionAutoDownload
         private static MelonPreferences_Entry<bool> s_willUpdateDefault = s_preferences.CreateEntry("WillUpdateDefault", true);
         public static bool WillUpdateDefault { get => s_willUpdateDefault.Value; set => s_willUpdateDefault.Value = value; }
 
+        private static MelonPreferences_Entry<string[]> s_modsLastDownloadLinks = s_preferences.CreateEntry("ModsLastDownloadLinks", new string[] { });
+        public static string[] ModsLastDownloadLinks { get => s_modsLastDownloadLinks.Value; set => s_modsLastDownloadLinks.Value = value; }
+
         public static string BlacklistPath;
         public static string UpdatePath;
         #endregion 
@@ -47,7 +50,6 @@ namespace FusionAutoDownload
             string modDirectory = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
             string filePath = Path.Combine(modDirectory, "repositories.txt");
             string contentToWrite = "https://blrepo.laund.moe/repository.json";
-            Msg(filePath);
 
             if (!File.Exists(filePath))
             {
@@ -63,6 +65,7 @@ namespace FusionAutoDownload
             string userdataPath = Path.Combine(Directory.GetParent(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)).FullName, "UserData");
             BlacklistPath = Path.Combine(userdataPath, "AutoDownload-BLACKLIST.txt");
             UpdatePath = Path.Combine(userdataPath, "AutoDownload-UPDATE.txt");
+
 
             if (!File.Exists(BlacklistPath))
                 using (StreamWriter writer = File.CreateText(BlacklistPath))
@@ -86,26 +89,7 @@ namespace FusionAutoDownload
 
             AutoDownloadMenu.Setup();
         }
-        [HarmonyLib.HarmonyPatch(typeof(SceneManager), "LoadSceneAsync", typeof(string), typeof(LoadSceneParameters))]
-        public class AsyncPatch
-        {
-            private static void Postfix(ref AsyncOperation __result)
-            {
-                if (GameObject.Find("LoadingScene/") != null)
-                    foreach (ModWrapper mod in RepoWrapper.AllMods)
-                        if (mod.Installed && !mod.Keeping)
-                        {
-                            try
-                            {
-                                AssetWarehouse.Instance.UnloadCrate(mod.Barcode);
-                                Directory.Delete(Path.Combine(MarrowSDK.RuntimeModsPath, mod.Barcode), true);
-                                mod.Installed = false;
-                            }
-                            catch
-                            { }
-                        }
-            }
-        }
+
         public static void Msg(object msg)
         {
 #if DEBUG

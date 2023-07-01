@@ -46,41 +46,37 @@ namespace FusionAutoDownload
 
         public void TryUpdate()
         {
-            if (!AutoUpdate)
+            if (!AutoUpdate || !Installed)
                 return;
 
-            try
+            for (int i = 0; i < AutoDownloadMelon.ModsLastDownloadLinks.Length + 1; i++)
             {
-                string oldJson = File.ReadAllText(Path.Combine(MarrowSDK.RuntimeModsPath, Barcode, "pallet.json"));
+                bool last = i == AutoDownloadMelon.ModsLastDownloadLinks.Length;
+                string modNUrl = last ? "" : AutoDownloadMelon.ModsLastDownloadLinks[i];
+                bool found = modNUrl.StartsWith(Barcode);
 
-                JObject jsonObject = JObject.Parse(oldJson);
-                string crateVersion = jsonObject["objects"]["o:1"]["version"].Value<string>();
-
-                bool needsUpdate = false;
-
-                if (int.TryParse(Version, out int l) && int.TryParse(crateVersion, out int r) && !crateVersion.Contains('.') && !Version.Contains('.'))
-                    needsUpdate = l > r;
-                else if (!needsUpdate && Version != crateVersion)
+                if (found)
                 {
-                    Msg($"Comparing for autoupdate: mod: {Barcode}, remote: {Version}, local: {crateVersion}");
-                    needsUpdate = new Version(Version) > new Version(crateVersion);
-                }
-                
-
-                if (needsUpdate)
-                {
-                    Installed = false;
-
-                    AutoDownloadMelon.UnityThread.Enqueue(() =>
+                    string[] splitted = modNUrl.Split('|');
+                    string savedUrl = splitted[splitted.Length - 1];
+                    if (savedUrl != Url)
                     {
-                        TryDownload();
-                        Msg("Updating!!");
-                    });
+                        AutoDownloadMelon.ModsLastDownloadLinks[i] = Barcode + "|" + Url;
+
+                        Installed = false;
+
+                        AutoDownloadMelon.UnityThread.Enqueue(() =>
+                        {
+                            TryDownload();
+                            Msg("Updating!!");
+                        });
+                    }
+                    break;
                 }
-            } catch(Exception ex) 
-            {
-                Msg("Failed to compare versions:");
-                Msg(ex);
+                else if (last)
+                {
+                    AutoDownloadMelon.UnityThread.Enqueue(() => AutoDownloadMelon.ModsLastDownloadLinks = AutoDownloadMelon.ModsLastDownloadLinks.Append(Barcode + "|" + Url).ToArray());
+                }
             }
         }
 
@@ -103,12 +99,33 @@ namespace FusionAutoDownload
                     onTried?.Invoke();
                 };
                 if (AutoDownloadMelon.ModSizeLimit != -1)
+                {
+                    Msg("Checking mod file size to make sure it isn't too big: " + Barcode);
                     RepoWrapper.GetURLFileSize(Url, (bytes) =>
                     {
                         if (bytes != -1 && ((bytes / 1e+6f) < AutoDownloadMelon.ModSizeLimit))
+                        {
+                            Msg(Barcode + " is not too big!");
                             onReady.Invoke();
+                        }
+                        else
+                        {
+                            Msg(Barcode + "is too big, size: " + bytes);
+                            onTried?.Invoke();
+                        }
                     });
+                }
                 else onReady.Invoke();
+            }
+            else
+            {
+                string o = "Mod has NOT newly started downloading: ";
+                if (Installed) o += "already installed";
+                if (Downloading) o += "already downloading";
+                if (Blocked) o += "blacklisted";
+                o += " | " + Barcode;
+                Msg(o);
+                onTried?.Invoke();
             }
         }
 

@@ -143,7 +143,7 @@ namespace FusionAutoDownload
         [HarmonyPatch(typeof(SpawnResponseMessage), "HandleMessage", new Type[] { typeof(byte[]), typeof(bool) })]
         class SpawnResponseMessage_HandleMessage_Patch
         {
-            private static ushort? s_lastSyncId = null;
+            private static List<ushort> s_spawnedItems;
             [HarmonyPrefix]
             public static bool Prefix(byte[] bytes, bool isServerHandled) // U
             {
@@ -154,17 +154,16 @@ namespace FusionAutoDownload
                 SpawnResponseData data = reader.ReadFusionSerializable<SpawnResponseData>();
 
                 // Prevent double spawning.
-                // This prefix gets called twice for some unknown reason
-                if (s_lastSyncId == null)
-                    s_lastSyncId = data.syncId;
-                else
-                    if (s_lastSyncId == data.syncId)
-                    {
-                        s_lastSyncId = null;
-                        return false;
-                    }
-                    else
-                        s_lastSyncId = null;
+                // This sometimes prefix gets called multiple times for some unknown reason
+                if (s_spawnedItems == null)
+                {
+                    s_spawnedItems = new List<ushort>();
+                    MultiplayerHooking.OnDisconnect += () => s_spawnedItems.Clear();
+                }
+
+                if (s_spawnedItems.Contains(data.syncId))
+                    return false;
+                else s_spawnedItems.Add(data.syncId);
 
 
                 var palletBarcode = RepoWrapper.GetPalletBarcode(data.barcode);

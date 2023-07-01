@@ -281,14 +281,27 @@ namespace FusionAutoDownload.Download_UI_Classes
 
                         SetupMenuFunctionality();
                     }
-                    __instance.MainPage?.transform.FindChild("Name")?.gameObject.SetActive(false);
+
+                    SpawnedMenu.transform.parent.Find("Name").gameObject.SetActive(false);
+                    SpawnedMenu.transform.parent.Find("ScrollUp").gameObject.SetActive(false);
+                    SpawnedMenu.transform.parent.Find("ScrollDown").gameObject.SetActive(false);
+                    SpawnedMenu.transform.parent.Find("Collider Mask Top").gameObject.SetActive(false);
+                    SpawnedMenu.transform.parent.Find("Collider Mask Bottem").gameObject.SetActive(false);
                 }
-                else if (SpawnedMenu != null)
+                else 
                 {
-                    UnityEngine.Object.Destroy(SpawnedMenu);
-                    __instance.MainPage?.transform.FindChild("Name")?.gameObject.SetActive(false);
-                    Category.SetName("Fusion Autodownloader");
-                } else __instance.MainPage?.transform.FindChild("Name")?.gameObject.SetActive(true);
+                    if (SpawnedMenu != null)
+                    {
+                        UnityEngine.Object.Destroy(SpawnedMenu);
+                        Category.SetName("Fusion Autodownloader");
+
+                        SpawnedMenu.transform.parent.Find("Name").gameObject.SetActive(true);
+                        SpawnedMenu.transform.parent.Find("ScrollUp").gameObject.SetActive(true);
+                        SpawnedMenu.transform.parent.Find("ScrollDown").gameObject.SetActive(true);
+                        SpawnedMenu.transform.parent.Find("Collider Mask Top").gameObject.SetActive(true);
+                        SpawnedMenu.transform.parent.Find("Collider Mask Bottem").gameObject.SetActive(true);
+                    }
+                } 
             }
         }
 
@@ -349,11 +362,12 @@ namespace FusionAutoDownload.Download_UI_Classes
         // - 2 - Search Button
         // - 3 - ModList Up Button
         // - 4 - ModList down Button
-        // - 5 - Keyboard Keys holder gameobject
-        // - 6 - Keyboard space button
-        // - 7 - Keyboard clear button
-        // - 8 - Keyboard backspace button
-        // - 9 - Search Bar Text TextMeshProUGUI
+        // - 5 - Keyboard Lower Keys holder gameobject
+        // - 6 - Keyboard Lower Keys holder gameobject
+        // - 7 - Keyboard backspace button
+        // - 8 - Keyboard enter button
+        // - 9 - Keyboard clear button
+        // - 10 - Search Bar Text TextMeshProUGUI
 
         public static void SetupMenuFunctionality()
         {
@@ -449,13 +463,13 @@ namespace FusionAutoDownload.Download_UI_Classes
             searchList.DestroyAllChildren();
             
             TextMeshProUGUI sortMode = searchMenuRefList.GetPersistant<TextMeshProUGUI>(1);
-            TextMeshProUGUI searchText = searchMenuRefList.GetPersistant<TextMeshProUGUI>(9);
+            TextMeshProUGUI searchText = searchMenuRefList.GetPersistant<TextMeshProUGUI>(10);
 
             Button modListUpBT = searchMenuRefList.GetPersistant<Button>(3);
             Button modListDownBT = searchMenuRefList.GetPersistant<Button>(4);
 
             // Search button pressed
-            searchMenuRefList.GetPersistant<Button>(2).onClick.AddListener(new Action(() => 
+            Action search = new Action(() => 
             {
                 searchList.DestroyAllChildren();
 
@@ -539,7 +553,10 @@ namespace FusionAutoDownload.Download_UI_Classes
                         break;
                 }
 
-            }));
+            });
+
+            searchMenuRefList.GetPersistant<Button>(2).onClick.AddListener(search);
+            searchMenuRefList.GetPersistant<Button>(8).onClick.AddListener(search);
 
             // Keyboard setup
             bool firstPress = true;
@@ -547,26 +564,33 @@ namespace FusionAutoDownload.Download_UI_Classes
             for (int i = 0; i < keyHolder.childCount; i++)
             {
                 Transform curKeyTrans = keyHolder.GetChild(i);
-                
-                if (i != 19)
-                curKeyTrans.GetComponent<Button>().onClick.AddListener(new Action(() => 
-                {
-                    if (firstPress)
-                        searchText.text = "";
-                    searchText.text += curKeyTrans.gameObject.name;
-                    firstPress = false;
-                }));
+
+                if (curKeyTrans.gameObject.name.Length == 1)
+                    curKeyTrans.GetComponent<Button>().onClick.AddListener(new Action(() =>
+                    {
+                        if (firstPress)
+                            searchText.text = "";
+                        searchText.text += curKeyTrans.gameObject.name;
+                        firstPress = false;
+                    }));
+            }
+            Transform keyHolder2 = searchMenuRefList.GetPersistant<GameObject>(6).transform;
+            for (int i = 0; i < keyHolder2.childCount; i++)
+            {
+                Transform curKeyTrans = keyHolder2.GetChild(i);
+
+                if (curKeyTrans.gameObject.name.Length == 1)
+                    curKeyTrans.GetComponent<Button>().onClick.AddListener(new Action(() =>
+                    {
+                        if (firstPress)
+                            searchText.text = "";
+                        searchText.text += curKeyTrans.gameObject.name;
+                        firstPress = false;
+                    }));
             }
 
-            searchMenuRefList.GetPersistant<Button>(6).onClick.AddListener(new Action(() => 
-            {
-                if (firstPress)
-                    searchText.text = "";
-                searchText.text += ' ';
-                firstPress = false;
-            }));
-            searchMenuRefList.GetPersistant<Button>(7).onClick.AddListener(new Action(() => { searchText.text = "..."; firstPress = true; }));
-            searchMenuRefList.GetPersistant<Button>(8).onClick.AddListener(new Action(() => 
+            
+            searchMenuRefList.GetPersistant<Button>(7).onClick.AddListener(new Action(() => 
             { 
                 searchText.text = searchText.text.Substring(0, searchText.text.Length-1);
                 if (searchText.text == "")
@@ -575,6 +599,8 @@ namespace FusionAutoDownload.Download_UI_Classes
                     firstPress = true;
                 }
             }));
+
+            searchMenuRefList.GetPersistant<Button>(9).onClick.AddListener(new Action(() => { searchText.text = "..."; firstPress = true; }));
         }
         // 6 - Search menu EventTrigger
         // - 0 - ModsList RectTransform
@@ -582,11 +608,12 @@ namespace FusionAutoDownload.Download_UI_Classes
         // - 2 - Search Button
         // - 3 - ModList Up Button
         // - 4 - ModList down Button
-        // - 5 - Keyboard Keys holder gameobject
-        // - 6 - Keyboard space button
-        // - 7 - Keyboard clear button
-        // - 8 - Keyboard backspace button
-        // - 9 - Search Bar Text TextMeshProUGUI
+        // - 5 - Keyboard Lower Keys holder gameobject
+        // - 6 - Keyboard Lower Keys holder gameobject
+        // - 7 - Keyboard backspace button
+        // - 8 - Keyboard enter button
+        // - 9 - Keyboard clear button
+        // - 10 - Search Bar Text TextMeshProUGUI
 
         public static class ModManagerMenu
         {
