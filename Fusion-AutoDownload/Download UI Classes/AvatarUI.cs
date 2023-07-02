@@ -77,7 +77,9 @@ namespace FusionAutoDownload
         {
             if (!Nulling)
             {
-                CrateBarcode = crateBarcode;
+                // Big props to Alfi's PeasantNulls for breaking one of the simplest rules (crate barcodes MUST be prefixed with the pallet's barcode)
+                CrateBarcode = crateBarcode.Replace("Alfi.PeasantNullOPTIONALVARIANTS", "Alfi.PeasantNull")
+                                           .Replace("Alfi.PeasantNullsEVILBODYEXPANSION", "Alfi.PeasantNullsFusionCustoms");
 
                 var palletCrate = RepoWrapper.GetPalletBarcode(crateBarcode);
 

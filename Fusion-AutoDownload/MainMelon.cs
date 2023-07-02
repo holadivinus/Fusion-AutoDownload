@@ -78,7 +78,7 @@ namespace FusionAutoDownload
 
         public override void OnLateInitializeMelon()
         {
-            new HarmonyLib.Harmony($"Holadivinus.{nameof(AutoDownloadMelon)}.(0.0.8)")
+            new HarmonyLib.Harmony($"Holadivinus.{nameof(AutoDownloadMelon)}.(0.0.9)")
             .PatchAll();
 
             RepoWrapper.FetchRepos();

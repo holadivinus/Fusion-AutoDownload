@@ -5,7 +5,7 @@ using MelonLoader;
 using System;
 
 [assembly: MelonColor(ConsoleColor.White)]
-[assembly: MelonInfo(typeof(AutoDownloadMelon), "Fusion Autodownloader", "0.0.8", "Holadivinus#holadivinus")]
+[assembly: MelonInfo(typeof(AutoDownloadMelon), "Fusion Autodownloader", "0.0.9", "Holadivinus#holadivinus")]
 [assembly: MelonGame("Stress Level Zero", "BONELAB")]
 
 [assembly: MelonPriority(-9000)]

@@ -82,7 +82,7 @@ namespace FusionAutoDownload.Download_UI_Classes
         }
 
         // Activation Patching
-        [HarmonyPatch(typeof(FusionSceneManager), "Internal_UpdateTargetScene")]
+        //[HarmonyPatch(typeof(FusionSceneManager), "Internal_UpdateTargetScene")]
         public class FusionSceneManager_Internal_UpdateTargetScene_Patch
         {
             private static readonly FieldInfo _targetServerScene_getter = AccessTools.Field(typeof(FusionSceneManager), "_targetServerScene");
@@ -91,8 +91,8 @@ namespace FusionAutoDownload.Download_UI_Classes
             public static bool _hasStartedLoadingTarget { get => (bool)_hasStartedLoadingTarget_getter.GetValue(null); set => _hasStartedLoadingTarget_getter.SetValue(null, value); }
 
 
-            [HarmonyPrefix]
-            public static bool PreFix()
+            //[HarmonyPrefix]
+            public static bool ProooooeFix()
             {
                 if (!(FusionSceneManager.IsDelayedLoadDone() && !_hasStartedLoadingTarget && !string.IsNullOrEmpty(_targetServerScene)))
                     return true;

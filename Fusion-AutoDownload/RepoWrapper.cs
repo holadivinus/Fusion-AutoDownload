@@ -227,7 +227,7 @@ namespace FusionAutoDownload
             });
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(SceneStreamer), nameof(SceneStreamer.Load), typeof(LevelCrateReference), typeof(LevelCrateReference))]
+        [HarmonyPatch(typeof(SceneStreamer), nameof(SceneStreamer.Load), typeof(LevelCrateReference), typeof(LevelCrateReference))]
         public class AsyncPatch
         {
             private static bool s_clearMods = false;
@@ -246,14 +246,19 @@ namespace FusionAutoDownload
                 {
                     if (mod.Installed && !mod.Keeping && !level.Barcode.ToString().StartsWith(mod.Barcode))
                     {
+                        mod.Installed = false;
+                        AssetWarehouse.Instance.UnloadCrate(mod.Barcode);
                         try
                         {
-                            AssetWarehouse.Instance.UnloadCrate(mod.Barcode);
                             Directory.Delete(Path.Combine(MarrowSDK.RuntimeModsPath, mod.Barcode), true);
-                            mod.Installed = false;
                         }
-                        catch
-                        { }
+                        catch { }
+
+                        try
+                        {
+                            Directory.Delete(Path.Combine(Directory.GetParent(MarrowSDK.RuntimeModsPath).FullName, "Mods_Autodownloaded", mod.Barcode), true);
+                        }
+                        catch { }
                     }
                 }
             }

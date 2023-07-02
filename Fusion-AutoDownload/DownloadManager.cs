@@ -6,13 +6,17 @@ using Steamworks.Ugc;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Networking;
+using static SLZ.AI.TriggerManager;
 
 namespace FusionAutoDownload
 {
@@ -46,20 +50,36 @@ namespace FusionAutoDownload
             if (uwr.result == UnityWebRequest.Result.Success)
             {
                 AssetWarehouse.Instance.UnloadPallet(mod.Barcode);
-                string unZippedPath = Path.Combine(MarrowSDK.RuntimeModsPath, mod.Barcode) + '\\';
+                string unZippedPath = Path.Combine(Directory.GetParent(MarrowSDK.RuntimeModsPath).FullName, "Mods_Autodownloaded", mod.Barcode) + '\\';
+                string symLinkPath = Path.Combine(MarrowSDK.RuntimeModsPath, mod.Barcode) + '\\';
                 if (Directory.Exists(unZippedPath))
                 {
                     AssetWarehouse.Instance.UnloadPallet(mod.Barcode);
                     Directory.Delete(unZippedPath, true);
+                    
                 }
-                ExtractPalletFolderFromZip(modZipPath, unZippedPath);
-                AutoDownloadMelon.UnityThread.Enqueue(() => 
-                { 
-                    AssetWarehouse.Instance.ReloadPallet(mod.Barcode);
-                    AssetWarehouse.Instance.LoadPalletFromFolderAsync(unZippedPath, true);
-                    mod.AutoUpdate = AutoDownloadMelon.WillUpdateDefault;
-                    mod.Keeping = !AutoDownloadMelon.WillDeleteDefault;
-                    Msg($"Download of {mod.Barcode} Complete!");
+                if (Directory.Exists(symLinkPath))
+                {
+                    Directory.Delete(symLinkPath, true);
+                }
+
+                ExtractPalletFolderFromZipAsync(modZipPath, unZippedPath, () => 
+                {
+                    Msg("A");
+                    AutoDownloadMelon.UnityThread.Enqueue(() =>
+                    {
+                        Msg($"unZippedPath: {unZippedPath}, symLinkPath: {symLinkPath}");
+                        var psi = new ProcessStartInfo("cmd.exe", " /C mklink /J \"" + symLinkPath + "\" \"" + unZippedPath + "\"");
+                        psi.CreateNoWindow = true;
+                        psi.UseShellExecute = false;
+                        Process.Start(psi).WaitForExit();
+
+                        AssetWarehouse.Instance.ReloadPallet(mod.Barcode);
+                        AssetWarehouse.Instance.LoadPalletFromFolderAsync(symLinkPath, true);
+                        mod.AutoUpdate = AutoDownloadMelon.WillUpdateDefault;
+                        mod.Keeping = !AutoDownloadMelon.WillDeleteDefault;
+                        Msg($"Download of {mod.Barcode} Complete!");
+                    });
                 });
             }
             else
@@ -69,35 +89,40 @@ namespace FusionAutoDownload
         }
 
 
-        public static void ExtractPalletFolderFromZip(string zipPath, string destinationPath)
+        public static void ExtractPalletFolderFromZipAsync(string zipPath, string destinationPath, Action onCompleteNON_U)
         {
-            Msg(zipPath);
-            Msg(destinationPath);
+            new Thread(() => 
+            { 
+                Msg(zipPath);
+                Msg(destinationPath);
 
-            // Create the destination directory if it does not exist
-            Directory.CreateDirectory(destinationPath);
+                // Create the destination directory if it does not exist
+                Directory.CreateDirectory(destinationPath);
 
-            // Open the zip archive
-            using (ZipArchive archive = ZipFile.OpenRead(zipPath))
-            {
-                ZipArchiveEntry palletJson = archive.Entries.FirstOrDefault(e => e.FullName.EndsWith("pallet.json"));
-                if (palletJson != null)
+                // Open the zip archive
+                using (ZipArchive archive = ZipFile.OpenRead(zipPath))
                 {
-                    string zipPalletRootPath = palletJson.FullName.Substring(0, palletJson.FullName.Length - 11);
-                    foreach (ZipArchiveEntry entry in archive.Entries)
+                    ZipArchiveEntry palletJson = archive.Entries.FirstOrDefault(e => e.FullName.EndsWith("pallet.json"));
+                    if (palletJson != null)
                     {
-                        if (!entry.FullName.StartsWith(zipPalletRootPath) || entry.FullName.EndsWith("/"))
-                            continue;
+                        string zipPalletRootPath = palletJson.FullName.Substring(0, palletJson.FullName.Length - 11);
+                        foreach (ZipArchiveEntry entry in archive.Entries)
+                        {
+                            if (!entry.FullName.StartsWith(zipPalletRootPath) || entry.FullName.EndsWith("/"))
+                                continue;
 
-                        string filePath = Path.Combine(destinationPath, entry.FullName.Substring(zipPalletRootPath.Length));
+                            string filePath = Path.Combine(destinationPath, entry.FullName.Substring(zipPalletRootPath.Length));
+                            int lastSlash = Math.Max(filePath.LastIndexOf('/'), filePath.LastIndexOf('\\'));
+                            Directory.CreateDirectory(filePath.Substring(0, lastSlash));
 
-                        Directory.CreateDirectory(filePath.Substring(0, filePath.LastIndexOf('/')));
-
-                        entry.ExtractToFile(filePath, true);
+                            entry.ExtractToFile(filePath, true);
+                        }
                     }
                 }
-            }
-            File.Delete(zipPath);
+                File.Delete(zipPath);
+
+                onCompleteNON_U?.Invoke();
+            }).Start();
         }
 
         public static void Msg(object msg) => AutoDownloadMelon.Msg(msg);
