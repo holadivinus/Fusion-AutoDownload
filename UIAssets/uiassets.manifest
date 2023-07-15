@@ -1,9 +1,9 @@
 ManifestFileVersion: 0
-CRC: 2441198216
+CRC: 4008607530
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: 938e0c84fe02bbf69fae6894564cf192
+    Hash: ad5d74cba1827059ce88d8cf2b9cb7df
   TypeTreeHash:
     serializedVersion: 2
     Hash: 28d5d7325cff9ea93d4780166419b331
@@ -140,6 +140,7 @@ Assets:
 - Assets/UI/CircRect.png
 - Assets/UI/CircleHole.png
 - Assets/UI/ModEntry.prefab
+- Assets/UI/Anims/Menu1Final.anim
 - Assets/UI/AutoDownload UI.prefab
 - Assets/UI/CircSliced.png
 - Assets/UI/CrateListing.prefab
@@ -147,6 +148,7 @@ Assets:
 - Assets/UI/gear.png
 - Assets/UI/Square.png
 - Assets/UI/Anims/ModSelectionMenuOpen.anim
+- Assets/UI/Anims/Menu2Final.anim
 - Assets/UI/Anims/Menu3.anim
 - Assets/UI/CircleLesser.png
 - Assets/UI/PersonIcon.png

@@ -54,13 +54,26 @@ namespace FusionAutoDownload
                 string symLinkPath = Path.Combine(MarrowSDK.RuntimeModsPath, mod.Barcode) + '\\';
                 if (Directory.Exists(unZippedPath))
                 {
+                    Msg("ERROR HERE???? 1");
                     AssetWarehouse.Instance.UnloadPallet(mod.Barcode);
-                    Directory.Delete(unZippedPath, true);
-                    
+                    try
+                    {
+                        Directory.Delete(unZippedPath, true);
+                    }catch(Exception ex)
+                    {
+                        Msg("Yes, error: " + ex.ToString());
+                    }
                 }
                 if (Directory.Exists(symLinkPath))
                 {
-                    Directory.Delete(symLinkPath, true);
+                    Msg("ERROR HERE???? 2");
+                    try
+                    {
+                        Directory.Delete(symLinkPath, true);
+                    }catch (Exception e)
+                    {
+                        Msg("Yes, error: " + e.ToString());
+                    }
                 }
 
                 ExtractPalletFolderFromZipAsync(modZipPath, unZippedPath, () => 

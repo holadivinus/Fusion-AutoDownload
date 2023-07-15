@@ -1,0 +1,11 @@
+B:\GitHub\Fusion-AutoDownload\Fusion-AutoDownload-AutoUpdater\bin\Debug\Fusion-AutoDownload-AutoUpdater.dll
+B:\GitHub\Fusion-AutoDownload\Fusion-AutoDownload-AutoUpdater\bin\Debug\Fusion-AutoDownload-AutoUpdater.pdb
+B:\GitHub\Fusion-AutoDownload\Fusion-AutoDownload-AutoUpdater\bin\Debug\MelonLoader.dll
+B:\GitHub\Fusion-AutoDownload\Fusion-AutoDownload-AutoUpdater\bin\Debug\Newtonsoft.Json.dll
+B:\GitHub\Fusion-AutoDownload\Fusion-AutoDownload-AutoUpdater\bin\Debug\0Harmony.dll
+B:\GitHub\Fusion-AutoDownload\Fusion-AutoDownload-AutoUpdater\bin\Debug\Newtonsoft.Json.xml
+B:\GitHub\Fusion-AutoDownload\Fusion-AutoDownload-AutoUpdater\obj\Debug\Fusion-AutoDownload-AutoUpdater.csproj.AssemblyReference.cache
+B:\GitHub\Fusion-AutoDownload\Fusion-AutoDownload-AutoUpdater\obj\Debug\Fusion-AutoDownload-AutoUpdater.csproj.CoreCompileInputs.cache
+B:\GitHub\Fusion-AutoDownload\Fusion-AutoDownload-AutoUpdater\obj\Debug\Fusion-AutoDownload-AutoUpdater.csproj.CopyComplete
+B:\GitHub\Fusion-AutoDownload\Fusion-AutoDownload-AutoUpdater\obj\Debug\Fusion-AutoDownload-AutoUpdater.dll
+B:\GitHub\Fusion-AutoDownload\Fusion-AutoDownload-AutoUpdater\obj\Debug\Fusion-AutoDownload-AutoUpdater.pdb

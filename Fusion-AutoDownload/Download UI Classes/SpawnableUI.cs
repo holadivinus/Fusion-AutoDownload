@@ -22,6 +22,8 @@ namespace FusionAutoDownload
 {
     public class SpawnableUI : ProgressUI
     {
+        public static Action<PropSyncableUpdateData> PropSyncableUpdate = delegate { };
+        public static Action<DespawnResponseData> PropSyncableDespawn = delegate { };
         public static Action FontFix = delegate { };
         public static TMP_FontAsset FixedFont;
         public SpawnableUI(SpawnResponseData data, ModWrapper mod, Action onComplete) : base() // U
@@ -30,9 +32,9 @@ namespace FusionAutoDownload
             CrateBarcode = data.barcode;
 
             // !Inheritted (UI GameObject Setup)
-            _mod = mod; _onComplete = onComplete; 
+            _data = data; _mod = mod; _onComplete = onComplete;
 
-            _uiRoot = UnityEngine.Object.Instantiate(UIAssetSpawnable, data.serializedTransform.position, Quaternion.identity);
+            _uiRoot = UnityEngine.Object.Instantiate(UIAssetSpawnable, _data.serializedTransform.position, Quaternion.identity);
             _uiRoot.transform.parent = RigData.RigReferences.RigManager.transform.parent;
 
             _canvasGroup = _uiRoot.GetComponent<CanvasGroup>();
@@ -49,6 +51,9 @@ namespace FusionAutoDownload
 
             _downloadBar = _uiRoot.transform.GetChild(1).GetChild(0).Cast<RectTransform>();
             // Completed UI GameObject Setup
+
+            PropSyncableUpdate += onPropSyncableUpdate;
+            PropSyncableDespawn += onPropSyncableDespawn;
         }
 
         // !Inheritted
@@ -59,6 +64,25 @@ namespace FusionAutoDownload
         private readonly RectTransform _downloadBar;
         private bool _visible;
 
+        private SpawnResponseData _data;
+
+        private void onPropSyncableUpdate(PropSyncableUpdateData updateData)
+        {
+            if (updateData != null && _data.syncId == updateData.syncId && updateData.serializedPositions != null && updateData.serializedPositions.Length > 0)
+            {
+                _canvasGroup.transform.position = updateData.serializedPositions[updateData.serializedPositions.Length - 1];
+                _data.serializedTransform.position = _canvasGroup.transform.position;
+
+                if (updateData.serializedQuaternions != null && updateData.serializedQuaternions.Length > 0)
+                    _data.serializedTransform.rotation = SerializedQuaternion.Compress(updateData.serializedQuaternions[updateData.serializedQuaternions.Length - 1].Expand());
+            }
+        }
+        private void onPropSyncableDespawn(DespawnResponseData despawnData)
+        {
+            if (despawnData.syncId == _data.syncId)
+                UnityEngine.Object.Destroy(_canvasGroup.gameObject);
+        }
+
         private void fontFix()
         {
             setFont(FixedFont);
@@ -67,7 +91,7 @@ namespace FusionAutoDownload
         private void setFont(TMP_FontAsset font)
         {
             foreach (TextMeshProUGUI text in _texts)
-                text.font = FixedFont;
+                text.font = font;
         }
 
         // Inheritted
@@ -100,14 +124,15 @@ namespace FusionAutoDownload
                 yield return null;
             }
 
+            PropSyncableUpdate -= onPropSyncableUpdate;
+            PropSyncableDespawn -= onPropSyncableDespawn;
         }
         protected override void OnMyCrateAdded() // U
         {
             if (!Nulling)
-            {
-                _visible = false;
                 _onComplete.Invoke();
-            }
+            
+            _visible = false;
         }
 
         // Patches
@@ -123,11 +148,11 @@ namespace FusionAutoDownload
                 return instructions;
             }
 
-            private static Type _nestedType = typeof(FusionMessageHandler).GetNestedTypes(BindingFlags.NonPublic)[0];
-            private static FieldInfo _state = _nestedType.GetField("<>1__state", AccessTools.all);
-            private static FieldInfo _awaitable = _nestedType.GetField("<awaitable>5__2", AccessTools.all);
-            private static FieldInfo _self = _nestedType.GetField("<>4__this", AccessTools.all);
-            private static FieldInfo _bytes = _nestedType.GetField("bytes", AccessTools.all);
+            private readonly static Type _nestedType = typeof(FusionMessageHandler).GetNestedTypes(BindingFlags.NonPublic)[0];
+            private readonly static FieldInfo _state = _nestedType.GetField("<>1__state", AccessTools.all);
+            private readonly static FieldInfo _awaitable = _nestedType.GetField("<awaitable>5__2", AccessTools.all);
+            private readonly static FieldInfo _self = _nestedType.GetField("<>4__this", AccessTools.all);
+            private readonly static FieldInfo _bytes = _nestedType.GetField("bytes", AccessTools.all);
             public static MethodBase TargetMethod() => AccessTools.Method(_nestedType, "MoveNext");
 
             public static void ProperPost(IEnumerator<object> __instance) 
@@ -225,6 +250,24 @@ namespace FusionAutoDownload
                 ByteRetriever.Return(bytes);
                 data.Dispose();
                 reader.Dispose();
+            }
+        }
+        [HarmonyPatch(typeof(PropSyncableUpdateData), nameof(PropSyncableUpdateData.Deserialize))]
+        static class PropSyncableUpdateData_Deserialize_Patch
+        {
+            [HarmonyPostfix]
+            public static void PostFix(PropSyncableUpdateData __instance)
+            { 
+                PropSyncableUpdate.Invoke(__instance);
+            }
+        }
+        [HarmonyPatch(typeof(DespawnResponseData), nameof(DespawnResponseData.Deserialize))]
+        static class DespawnResponseData_Deserialize_Patch
+        {
+            [HarmonyPostfix]
+            public static void PostFix(DespawnResponseData __instance)
+            {
+                PropSyncableDespawn.Invoke(__instance);
             }
         }
     }

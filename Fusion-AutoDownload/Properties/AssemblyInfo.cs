@@ -4,8 +4,10 @@ using FusionAutoDownload;
 using MelonLoader;
 using System;
 
+
+
 [assembly: MelonColor(ConsoleColor.White)]
-[assembly: MelonInfo(typeof(AutoDownloadMelon), "Fusion Autodownloader", "0.0.9", "Holadivinus#holadivinus")]
+[assembly: MelonInfo(typeof(AutoDownloadMelon), "Fusion Autodownloader", ModVersion.VERSION, "Holadivinus#holadivinus")]
 [assembly: MelonGame("Stress Level Zero", "BONELAB")]
 
 [assembly: MelonPriority(-9000)]
@@ -30,15 +32,11 @@ using System;
 // The following GUID is for the ID of the typelib if this project is exposed to COM
 [assembly: Guid("fc79b732-5ebe-4a9b-a19d-f0cd0716f661")]
 
-// Version information for an assembly consists of the following four values:
-//
-//      Major Version
-//      Minor Version
-//      Build Number
-//      Revision
-//
-// You can specify all the values or you can default the Build and Revision Numbers
-// by using the '*' as shown below:
-// [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.0.0.0")]
+
+[assembly: AssemblyVersion("1." + ModVersion.VERSION)]
+[assembly: AssemblyFileVersion("1." + ModVersion.VERSION)]
+
+public static class ModVersion
+{
+    public const string VERSION = "0.1.0";
+}

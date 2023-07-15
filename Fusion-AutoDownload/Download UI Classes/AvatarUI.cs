@@ -14,7 +14,7 @@ namespace FusionAutoDownload
     public class AvatarUI : ProgressUI
     {
         public static Dictionary<PlayerRep, AvatarUI> PlayerUIs = new Dictionary<PlayerRep, AvatarUI>();
-        private static FieldInfo s_field_PlayerRep_isAvatarDirty = AccessTools.Field(typeof(PlayerRep), "_isAvatarDirty");
+        private readonly static FieldInfo s_field_PlayerRep_isAvatarDirty = AccessTools.Field(typeof(PlayerRep), "_isAvatarDirty");
 
 
         public AvatarUI(PlayerRep player) : base() // U
@@ -23,7 +23,7 @@ namespace FusionAutoDownload
             CrateBarcode = player.avatarId;
 
             // !Inheritted (UI GameObject Setup)
-            Msg("AvatarUI Created for " + player.Username);
+            msg("AvatarUI Created for " + player.Username);
             UIPlayer = player;
 
             // Update PlayerRep Dict
@@ -46,7 +46,7 @@ namespace FusionAutoDownload
             _statusImage = _uiRoot.transform.GetChild(1).GetComponent<Image>();
             _statusImage.color = Color.white;
 
-            _avatarImage = _uiRoot.GetComponentInChildren<RawImage>(true);
+            //_avatarImage = _uiRoot.GetComponentInChildren<RawImage>(true);
 
             _downloadBar = _uiRoot.transform.GetChild(0).GetChild(1).GetChild(0).Cast<RectTransform>();
             _barGroup = _uiRoot.transform.GetChild(0).GetComponent<CanvasGroup>();
@@ -66,7 +66,7 @@ namespace FusionAutoDownload
         private readonly RectTransform _downloadBar;
         private readonly TextMeshProUGUI[] _texts;
         private readonly Image _statusImage;
-        private readonly RawImage _avatarImage;
+        //private readonly RawImage _avatarImage;
 
         /// <summary>
         /// Function
@@ -83,36 +83,36 @@ namespace FusionAutoDownload
 
                 var palletCrate = RepoWrapper.GetPalletBarcode(crateBarcode);
 
-                ModWrapper mod;
-                if (palletCrate.HasValue && RepoWrapper.Barcode2Mod.TryGetValue(palletCrate.Value.Item1, out mod))
+                if (palletCrate.HasValue && RepoWrapper.Barcode2Mod.TryGetValue(palletCrate.Value.Item1, out ModWrapper mod))
                 {
                     _mod = mod;
                     _texts[0].text = mod.Barcode;
                     if (!success)
                     {
-                        Msg($"Avatar {crateBarcode} attempting download!");
+                        msg($"Avatar {crateBarcode} attempting download!");
                         mod.TryDownload(() =>
                         {
                             if (_statusImage != null)
                                 _statusImage.color = mod.Downloading ? Color.yellow : Color.red;
 
-                            Msg($"Avatar {crateBarcode} " + (mod.Downloading ? "now downloading!" : "not downloading."));
+                            msg($"Avatar {crateBarcode} " + (mod.Downloading ? "now downloading!" : "not downloading."));
                         });
                     }
                     else
                     {
                         _statusImage.color = Color.white;
-
-                        Msg("Avatar not changed! Avatar is an installed mod. " + crateBarcode);
+                        _mod = null;
+                        msg("Avatar not changed! Avatar is an installed mod. " + crateBarcode);
                     }
                 }
                 else
                 {
-                    Msg("Avatar not changed! " + (success ? "Avatar is base-game" : "Avatar was not found in Barcode2Mod Dict!"));
+                    _mod = null;
+                    msg("Avatar not changed! " + (success ? "Avatar is base-game" : "Avatar was not found in Barcode2Mod Dict!"));
                     _statusImage.color = success ? Color.white : Color.red;
                 }
             }
-            else Msg($"Error! Cant update, this UI no longer exists.");
+            else msg($"Error! Cant update, this UI no longer exists.");
         }
 
         // Inheritted
@@ -148,13 +148,13 @@ namespace FusionAutoDownload
             [HarmonyPrefix]
             public static void Prefix(PlayerRep __instance, bool success) // U
             {
-                Msg($"User \"{__instance.Username}\" attempted to swap into {__instance.avatarId}, success: {success}");
+                msg($"User \"{__instance.Username}\" attempted to swap into {__instance.avatarId}, success: {success}");
                 if (PlayerUIs.TryGetValue(__instance, out AvatarUI avatarUI))
                 {
-                    Msg($"AvatarUI found for {__instance.Username}, updating crate to {__instance.avatarId}");
+                    msg($"AvatarUI found for {__instance.Username}, updating crate to {__instance.avatarId}");
                     avatarUI.UpdateCrate(__instance.avatarId, success);
                 }
-                else Msg($"Error: {__instance.Username} has no AvatarUI registered in the PlayerUIs Dict!");
+                else msg($"Error: {__instance.Username} has no AvatarUI registered in the PlayerUIs Dict!");
             }
         }
 
@@ -165,6 +165,6 @@ namespace FusionAutoDownload
             public static void Postfix(PlayerRep __instance) => new AvatarUI(__instance); // U
         }
 
-        private static void Msg(object msg) => AutoDownloadMelon.Msg(msg);
+        private static void msg(object msg) => AutoDownloadMelon.Msg(msg);
     }
 }

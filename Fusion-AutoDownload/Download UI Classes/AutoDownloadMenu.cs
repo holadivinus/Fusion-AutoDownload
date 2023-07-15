@@ -356,6 +356,10 @@ namespace FusionAutoDownload.Download_UI_Classes
         // - 4 - mod will update Toggle
         // - 5 - mod max file size display TextMeshProUGUI
         // - 6 - discord Button
+        // - 7 - Set all mods to Update Button
+        // - 8 - Set all mods to not Update Button
+        // - 9 - Set all mods to delete Button
+        // - 10 - Set all mods to not delete Button
         // 6 - Search menu EventTrigger
         // - 0 - ModsList RectTransform
         // - 1 - Sort Mode TextMeshProUGUI
@@ -453,6 +457,32 @@ namespace FusionAutoDownload.Download_UI_Classes
             willUpdate.onValueChanged.AddListener(new Action<bool>((state) =>
             {
                 AutoDownloadMelon.WillUpdateDefault = state;
+            }));
+
+            // set all mods to autoupdate / delete bts
+            safeteyMenuRefs.GetPersistant<Button>(7).onClick.AddListener(new Action(() =>
+            {
+                foreach (ModWrapper mod in RepoWrapper.AllMods)
+                    if (mod.Installed)
+                        mod.AutoUpdate = true;
+            }));
+            safeteyMenuRefs.GetPersistant<Button>(8).onClick.AddListener(new Action(() =>
+            {
+                foreach (ModWrapper mod in RepoWrapper.AllMods)
+                    if (mod.Installed)
+                        mod.AutoUpdate = false;
+            }));
+            safeteyMenuRefs.GetPersistant<Button>(9).onClick.AddListener(new Action(() =>
+            {
+                foreach (ModWrapper mod in RepoWrapper.AllMods)
+                    if (mod.Installed)
+                        mod.Keeping = false;
+            }));
+            safeteyMenuRefs.GetPersistant<Button>(10).onClick.AddListener(new Action(() =>
+            {
+                foreach (ModWrapper mod in RepoWrapper.AllMods)
+                    if (mod.Installed)
+                        mod.Keeping = true;
             }));
 
 

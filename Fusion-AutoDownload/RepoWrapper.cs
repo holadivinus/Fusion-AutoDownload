@@ -119,7 +119,7 @@ namespace FusionAutoDownload
             // If we're here, the mod's been added to Barcode2Mod & Url2Mod.
 
             newWrapper.Blocked = blacklisted.Contains(newWrapper.Barcode);
-            newWrapper.AutoUpdate = updating.Contains(newWrapper.Barcode);
+            newWrapper.AutoUpdate = newWrapper.Installed && updating.Contains(newWrapper.Barcode);
         }
         #endregion
 
