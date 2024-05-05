@@ -74,7 +74,7 @@ namespace FusionAutoDownload
                 _data.serializedTransform.position = _canvasGroup.transform.position;
 
                 if (updateData.serializedQuaternions != null && updateData.serializedQuaternions.Length > 0)
-                    _data.serializedTransform.rotation = SerializedQuaternion.Compress(updateData.serializedQuaternions[updateData.serializedQuaternions.Length - 1].Expand());
+                    _data.serializedTransform.rotation = SerializedQuaternion.Compress(updateData.serializedQuaternions[updateData.serializedQuaternions.Length - 1].Expand()).Expand();
             }
         }
         private void onPropSyncableDespawn(DespawnResponseData despawnData)
@@ -136,7 +136,7 @@ namespace FusionAutoDownload
         }
 
         // Patches
-        [HarmonyPatch]
+        /*[HarmonyPatch]
         public static class FusionMessageHandler_MoveNext_Patch
         {
             public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
@@ -164,7 +164,7 @@ namespace FusionAutoDownload
                     ByteRetriever.Return((byte[])_bytes.GetValue(__instance));
                 }
             }
-        }
+        }*/
         [HarmonyPatch(typeof(SpawnResponseMessage), "HandleMessage", new Type[] { typeof(byte[]), typeof(bool) })]
         class SpawnResponseMessage_HandleMessage_Patch
         {
@@ -243,7 +243,7 @@ namespace FusionAutoDownload
                 string path = data.spawnerPath;
                 var hand = data.hand;
 
-                NullableMethodExtensions.PoolManager_Spawn(spawnable, data.serializedTransform.position, data.serializedTransform.rotation.Expand(), null,
+                NullableMethodExtensions.PoolManager_Spawn(spawnable, data.serializedTransform.position, data.serializedTransform.rotation, null,
                     true, null, (Action<GameObject>)((go) => { SpawnResponseMessage.OnSpawnFinished(owner, barcode, syncId, go, path, hand); }), null);
 
                 

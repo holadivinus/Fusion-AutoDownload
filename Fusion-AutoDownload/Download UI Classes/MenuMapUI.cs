@@ -122,10 +122,10 @@ namespace FusionAutoDownload.UIClasses
                     INetworkLobby lobby = BoneMenuCreator_CreateLobby_Patch.LatestLobby;
 
                     info.ClientHasLevel = true;
-                    Action onHas = lobby.CreateJoinDelegate(info);
+                    Action onHas = lobby.CreateJoinDelegate(info.LobbyId);
 
                     info.ClientHasLevel = false;
-                    Action onNotHas = lobby.CreateJoinDelegate(info);
+                    Action onNotHas = lobby.CreateJoinDelegate(info.LobbyId);
 
                     info.ClientHasLevel = FusionSceneManager.HasLevel(info.LevelBarcode);
 

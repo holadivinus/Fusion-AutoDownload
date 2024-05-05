@@ -1,37 +1,21 @@
-﻿using Cysharp.Threading.Tasks;
-using HarmonyLib;
-using Jevil;
+﻿using HarmonyLib;
 using LabFusion.Data;
-using MelonLoader;
-using MelonLoader.TinyJSON;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
+using LabFusion.Network;
+using Newtonsoft.Json.Linq;
+using SLZ.Marrow;
 using SLZ.Marrow.Forklift;
 using SLZ.Marrow.Forklift.Model;
+using SLZ.Marrow.SceneStreaming;
 using SLZ.Marrow.Warehouse;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Runtime.InteropServices;
-using System.Security.Policy;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using UnhollowerBaseLib;
 using UnityEngine;
 using UnityEngine.Networking;
-using static Il2CppSystem.Globalization.CultureInfo;
 using Il2Cpp = Il2CppSystem.Collections.Generic;
-using Newtonsoft.Json.Linq;
-using Il2CppSystem.Security.Util;
-using System.IO;
-using SLZ.Marrow.SceneStreaming;
-using SLZ.Marrow;
-using LabFusion.Utilities;
-using Steamworks;
-using LabFusion;
-using LabFusion.Network;
 
 namespace FusionAutoDownload
 {

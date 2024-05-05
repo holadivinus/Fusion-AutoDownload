@@ -1,21 +1,6 @@
-﻿using BoneLib;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using static MelonLoader.MelonLogger;
-using UnityEngine;
-using LabFusion.Data;
-using static RootMotion.FinalIK.GrounderQuadruped;
-using SLZ.VRMK;
-using System.IO.Pipes;
-using SLZ.Marrow.Forklift.Model;
-using SLZ.Rig;
-using Il2CppSystem.Globalization;
-using Il2CppSystem.Threading;
-using Cysharp.Threading.Tasks;
-using MelonLoader;
-using static Il2CppSystem.Globalization.CultureInfo;
+﻿using MelonLoader;
 using System.Collections;
+using UnityEngine;
 
 namespace FusionAutoDownload
 {

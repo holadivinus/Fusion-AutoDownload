@@ -1,22 +1,14 @@
-﻿using Il2CppMono.Globalization.Unicode;
-using MelonLoader;
+﻿using MelonLoader;
 using SLZ.Marrow;
 using SLZ.Marrow.Warehouse;
-using Steamworks.Ugc;
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
-using UnityEngine;
 using UnityEngine.Networking;
-using static SLZ.AI.TriggerManager;
 
 namespace FusionAutoDownload
 {
