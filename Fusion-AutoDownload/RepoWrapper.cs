@@ -1,4 +1,5 @@
-﻿using HarmonyLib;
+﻿using BoneLib;
+using HarmonyLib;
 using LabFusion.Data;
 using LabFusion.Network;
 using Newtonsoft.Json.Linq;
@@ -21,8 +22,8 @@ namespace FusionAutoDownload
 {
     public static class RepoWrapper
     {
-        public static AssetBundle UIBundle = EmbeddedAssetBundle.LoadFromAssembly(System.Reflection.Assembly.GetExecutingAssembly(), "FusionAutoDownload.uiassets");
-        public const string Platform = "pc";
+        public static AssetBundle UIBundle = null;
+        public static string Platform;
 
         public static ModWrapper[] AllMods;
         public static Dictionary<string, ModWrapper> Barcode2Mod = new Dictionary<string, ModWrapper>();
@@ -32,8 +33,19 @@ namespace FusionAutoDownload
         public static Dictionary<string, ModWrapper> DownloadingMods = new Dictionary<string, ModWrapper>();
 
         #region Repo Fetching
-        public static async void FetchRepos() // U
-        { 
+        public static async void FetchRepos()
+        {
+            if (HelperMethods.IsAndroid())
+            {
+                Platform = "oculus-quest";
+            }
+            else
+            {
+                Platform = "pc";
+            }
+
+            UIBundle = HelperMethods.LoadEmbeddedAssetBundle(System.Reflection.Assembly.GetExecutingAssembly(), HelperMethods.IsAndroid() ? "FusionAutoDownload.Resources.Android.Bundle.uiassets" : "FusionAutoDownload.Resources.Windows.Bundle.uiassets");
+
             Il2Cpp.List<ModRepository> fetchedRepos = await new ModDownloadManager().FetchRepositoriesAsync("Mods/");
 
             IEnumerable<string> blacklistedBarcodes = File.ReadAllText(AutoDownloadMelon.BlacklistPath)

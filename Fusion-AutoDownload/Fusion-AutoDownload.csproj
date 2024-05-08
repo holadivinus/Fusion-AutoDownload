@@ -494,10 +494,6 @@
     <Reference Include="UnityEngine.UnityWebRequestAudioModule">
       <HintPath>C:\Users\Holadivinus\AppData\Roaming\r2modmanPlus-local\BONELAB\profiles\Autodownload\MelonLoader\Managed\UnityEngine.UnityWebRequestAudioModule.dll</HintPath>
     </Reference>
-    <Reference Include="UnityEngine.UnityWebRequestModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>C:\Users\Holadivinus\AppData\Roaming\r2modmanPlus-local\BONELAB\profiles\Autodownload\MelonLoader\Managed\UnityEngine.UnityWebRequestModule.dll</HintPath>
-    </Reference>
     <Reference Include="UnityEngine.UnityWebRequestTextureModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>C:\Users\Holadivinus\AppData\Roaming\r2modmanPlus-local\BONELAB\profiles\Autodownload\MelonLoader\Managed\UnityEngine.UnityWebRequestTextureModule.dll</HintPath>
@@ -550,6 +546,8 @@
   <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
+    <EmbeddedResource Include="Resources\Android\Bundle.uiassets" />
+    <EmbeddedResource Include="Resources\Windows\Bundle.uiassets" />
   </ItemGroup>
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
